@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "WebFetch(domain:docs.nats.io)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "mcp__nats__kv_put",
+      "mcp__nats__kv_get",
+      "mcp__zen__chat",
+      "Bash(find:*)",
+      "Bash(nats kv get:*)",
+      "Bash(/dev/null)",
+      "Bash(nats kv:*)"
+    ],
+    "deny": []
+  },
+  "enabledMcpjsonServers": [
+    "nats"
+  ]
+}

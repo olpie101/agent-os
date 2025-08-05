@@ -37,7 +37,7 @@ echo ""
 echo "📥 Downloading Claude Code command files to ~/.claude/commands/"
 
 # Commands
-for cmd in plan-product create-spec execute-tasks analyze-product; do
+for cmd in plan-product create-spec execute-tasks analyze-product peer git-commit; do
     if [ -f "$HOME/.claude/commands/${cmd}.md" ]; then
         echo "  ⚠️  ~/.claude/commands/${cmd}.md already exists - skipping"
     else
@@ -51,7 +51,7 @@ echo ""
 echo "📥 Downloading Claude Code subagents to ~/.claude/agents/"
 
 # List of agent files to download
-agents=("test-runner" "context-fetcher" "git-workflow" "file-creator" "date-checker")
+agents=("test-runner" "context-fetcher" "git-workflow" "file-creator" "date-checker" "peer-planner" "peer-executor" "peer-express" "peer-review")
 
 for agent in "${agents[@]}"; do
     if [ -f "$HOME/.claude/agents/${agent}.md" ]; then
@@ -82,6 +82,15 @@ echo "  /create-spec (or simply ask 'what's next?')"
 echo ""
 echo "Build and ship code with:"
 echo "  /execute-task"
+echo ""
+echo "Execute any instruction through PEER pattern with:"
+echo "  /peer --instruction=<name>"
+echo ""
+echo "Continue a PEER execution with:"
+echo "  /peer --continue"
+echo ""
+echo "Execute git commits with MCP validation (when available):"
+echo "  /peer --instruction=git-commit"
 echo ""
 echo "Learn more at https://buildermethods.com/agent-os"
 echo ""

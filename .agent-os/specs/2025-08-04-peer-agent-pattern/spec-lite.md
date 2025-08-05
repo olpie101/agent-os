@@ -1,0 +1,3 @@
+# Spec Summary (Lite)
+
+Implement PEER (Plan, Execute, Express, Review) agent pattern in Agent OS by creating specialized subagents for each phase and updating existing instructions to leverage this pattern. This will improve task decomposition, execution quality, and output consistency while maintaining backward compatibility with existing agents. The Review agent can trigger new PEER cycles to ensure quality standards are met.

@@ -200,6 +200,30 @@ else
     fi
 fi
 
+# peer.md
+if [ -f "$HOME/.agent-os/instructions/core/peer.md" ] && [ "$OVERWRITE_INSTRUCTIONS" = false ]; then
+    echo "    ⚠️  ~/.agent-os/instructions/core/peer.md already exists - skipping"
+else
+    curl -s -o "$HOME/.agent-os/instructions/core/peer.md" "${BASE_URL}/instructions/core/peer.md"
+    if [ -f "$HOME/.agent-os/instructions/core/peer.md" ] && [ "$OVERWRITE_INSTRUCTIONS" = true ]; then
+        echo "    ✓ ~/.agent-os/instructions/core/peer.md (overwritten)"
+    else
+        echo "    ✓ ~/.agent-os/instructions/core/peer.md"
+    fi
+fi
+
+# git-commit.md
+if [ -f "$HOME/.agent-os/instructions/core/git-commit.md" ] && [ "$OVERWRITE_INSTRUCTIONS" = false ]; then
+    echo "    ⚠️  ~/.agent-os/instructions/core/git-commit.md already exists - skipping"
+else
+    curl -s -o "$HOME/.agent-os/instructions/core/git-commit.md" "${BASE_URL}/instructions/core/git-commit.md"
+    if [ -f "$HOME/.agent-os/instructions/core/git-commit.md" ] && [ "$OVERWRITE_INSTRUCTIONS" = true ]; then
+        echo "    ✓ ~/.agent-os/instructions/core/git-commit.md (overwritten)"
+    else
+        echo "    ✓ ~/.agent-os/instructions/core/git-commit.md"
+    fi
+fi
+
 # Meta instruction files
 echo ""
 echo "  📂 Meta instructions:"
