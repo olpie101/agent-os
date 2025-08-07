@@ -73,9 +73,20 @@ The Review agent will automatically evaluate outputs from the Express agent, che
    - User wasn't prompted to review spec before PEER execution continued
    - Two different review mechanisms operating independently
 
+5. **Complex Bash Scripts in Instructions**
+   - Current bash scripts embedded in instruction file are too complex with heredocs and multi-line logic
+   - Shell variable conflicts (e.g., 'history' is a reserved variable)
+   - Parser errors due to complex nesting and escaping issues
+
 ### Root Cause Analysis
 
 Comparing with working instructions like create-spec.md, the issue is that peer.md has NATS operations written as descriptive content in `<pre_flight_check>` rather than as executable process steps. The XML blocks contain bash commands but they're documentation, not actual tool invocations that Claude executes. Working instructions put executable operations in `<step>` elements with proper tool calls.
+
+### Additional Requirements Based on Execution Issues
+
+1. **Script Extraction**: Complex bash operations should be extracted into separate, self-documenting script files in `dev/agent-os/scripts/peer/` directory
+2. **Intelligent Caching**: Infrastructure checks (NATS availability, bucket existence) should be cached and only run when necessary (e.g., once per day or on connectivity failure)
+3. **Simplified Logic**: Some operations can be inferred from input rather than requiring bash scripts (e.g., argument parsing, context determination)
 
 ## Expected Deliverable
 
@@ -84,3 +95,7 @@ Comparing with working instructions like create-spec.md, the issue is that peer.
 3. Complete execution history in NATS KV with cycle-based tracking and phase output preservation
 4. **[UPDATED]** Fixed peer.md instruction that actually executes NATS operations using tool calls
 5. **[UPDATED]** Proper agent parameter passing for seamless integration
+6. **[NEW]** External script files in `dev/agent-os/scripts/peer/` directory for complex operations
+7. **[NEW]** Intelligent caching mechanism for infrastructure checks to reduce overhead
+8. **[NEW]** Self-documenting scripts with clear parameters and return values
+9. **[NEW]** Trap-based cleanup for all script-local temporary files to prevent data contamination

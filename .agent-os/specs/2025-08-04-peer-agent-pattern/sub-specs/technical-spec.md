@@ -143,6 +143,150 @@ All KV operations use NATS CLI commands via Bash tool.
   - `@claude-code/agents/peer-executor.md`
   - `@claude-code/agents/peer-express.md`
   - `@claude-code/agents/peer-review.md`
+- **Script Files**: All in `@scripts/peer/` directory:
+  - `@scripts/peer/check-nats-health.sh` - NATS availability check with caching
+  - `@scripts/peer/setup-kv-bucket.sh` - Bucket creation and verification
+  - `@scripts/peer/parse-arguments.sh` - Command line argument parsing
+  - `@scripts/peer/determine-context.sh` - Instruction classification logic
+  - `@scripts/peer/initialize-cycle.sh` - PEER cycle initialization
+  - `@scripts/peer/finalize-cycle.sh` - Cycle completion and cleanup
+
+### Script Architecture and Design
+
+#### Script Organization
+Scripts are organized to separate concerns and improve maintainability:
+
+1. **Infrastructure Scripts** (Run conditionally with caching):
+   - `check-nats-health.sh`: Checks NATS server availability
+   - `setup-kv-bucket.sh`: Ensures required KV bucket exists
+
+2. **Core Execution Scripts** (Run every time):
+   - `parse-arguments.sh`: Parses command-line arguments
+   - `determine-context.sh`: Classifies instruction type
+   - `initialize-cycle.sh`: Sets up PEER cycle state
+   - `finalize-cycle.sh`: Completes cycle and cleanup
+
+#### Script Documentation Standards
+Each script must be self-documenting with:
+```bash
+#!/bin/bash
+# Script: script-name.sh
+# Purpose: Brief description of what the script does
+# Parameters: List of expected parameters
+# Output: What the script outputs (files, stdout, exit codes)
+# Cache: If applicable, caching strategy used
+# Dependencies: External commands or files required
+
+# Cleanup function for script-local temp files
+cleanup() {
+    rm -f /tmp/script_specific_*.tmp
+    # DO NOT delete files needed by other scripts
+}
+
+# Set trap for cleanup on exit
+trap cleanup EXIT
+```
+
+#### Caching Strategy
+Infrastructure checks use intelligent caching to reduce overhead:
+
+1. **NATS Health Check Cache**:
+   - Cache file: `/tmp/.peer-nats-check`
+   - Format: `timestamp:status`
+   - TTL: 24 hours
+   - Invalidation: On NATS operation failure
+
+2. **Bucket Existence Cache**:
+   - Checked on first NATS health check of the day
+   - No separate cache (piggybacks on health check)
+
+#### Script Execution Pattern
+The peer.md instruction calls scripts using Bash tool:
+```bash
+# Simple script execution
+dev/agent-os/scripts/peer/check-nats-health.sh
+
+# Script with parameters
+dev/agent-os/scripts/peer/parse-arguments.sh "$@"
+
+# Conditional execution based on exit code
+if dev/agent-os/scripts/peer/determine-context.sh; then
+    # Context is spec-aware
+else
+    # Context is non-spec
+fi
+```
+
+#### Parameter Simplification
+Instead of complex bash logic in instructions, scripts handle:
+- Argument parsing from command line
+- Context inference from instruction names
+- File-based communication via `/tmp/peer_*.txt` files
+- JSON construction and parsing for NATS operations
+
+#### Temp File Management
+Scripts use two categories of temp files:
+
+1. **Inter-script Communication Files** (cleaned by finalize-cycle.sh on success):
+   - `/tmp/peer_args.txt` - Created by parse-arguments.sh, needed by others
+   - `/tmp/peer_context.txt` - Created by determine-context.sh, needed by others
+   - `/tmp/peer_cycle.txt` - Created by initialize-cycle.sh, needed by agents
+
+2. **Script-local Temp Files** (MUST be cleaned by creating script using trap):
+   - **check-nats-health.sh**: None (cache file `/tmp/.peer-nats-check` is intentionally kept)
+   - **setup-kv-bucket.sh**: `/tmp/bucket_info.txt`
+   - **parse-arguments.sh**: None (creates communication file only)
+   - **determine-context.sh**: None (creates communication file only)
+   - **initialize-cycle.sh**: `/tmp/current_meta.json`, `/tmp/existing_meta.json`, `/tmp/updated_meta.json`, `/tmp/new_cycle.json`
+   - **finalize-cycle.sh**: `/tmp/final_meta.json`, `/tmp/final_meta_updated.json`, `/tmp/final_cycle.json`, `/tmp/final_cycle_updated.json`
+
+#### Trap-based Cleanup Implementation
+
+Each script that creates local temp files must implement trap-based cleanup:
+
+```bash
+#!/bin/bash
+# Script: setup-kv-bucket.sh
+
+# Cleanup function - ONLY for local temp files
+cleanup() {
+    rm -f /tmp/bucket_info.txt
+}
+
+# Set trap for cleanup on any exit
+trap cleanup EXIT
+```
+
+**initialize-cycle.sh cleanup example:**
+```bash
+cleanup() {
+    # Clean up only local JSON files used internally
+    rm -f /tmp/current_meta.json /tmp/existing_meta.json 
+    rm -f /tmp/updated_meta.json /tmp/new_cycle.json
+    # DO NOT clean up /tmp/peer_*.txt files here
+}
+trap cleanup EXIT
+```
+
+**finalize-cycle.sh cleanup example:**
+```bash
+cleanup() {
+    # Clean up local JSON files
+    rm -f /tmp/final_meta.json /tmp/final_meta_updated.json
+    rm -f /tmp/final_cycle.json /tmp/final_cycle_updated.json
+}
+trap cleanup EXIT
+
+# At the END of successful execution only:
+# Clean up ALL communication files
+rm -f /tmp/peer_*.txt
+```
+
+**Important Rules:**
+1. Scripts MUST use trap to clean their own local temp files
+2. Scripts MUST NOT use trap to clean inter-script communication files
+3. Only finalize-cycle.sh cleans communication files, and only on successful completion
+4. Cache files (like `/tmp/.peer-nats-check`) are intentionally preserved
 
 ### Critical Issues Discovered in Testing
 
@@ -598,6 +742,31 @@ else
 fi
 ```
 
+#### Scripts Section
+Add to the scripts download section (after instructions):
+
+```bash
+# PEER Scripts
+echo "  📂 Creating scripts directory..."
+mkdir -p "$HOME/.agent-os/scripts/peer"
+
+scripts=("check-nats-health.sh" "setup-kv-bucket.sh" "parse-arguments.sh" "determine-context.sh" "initialize-cycle.sh" "finalize-cycle.sh")
+
+for script in "${scripts[@]}"; do
+    if [ -f "$HOME/.agent-os/scripts/peer/${script}" ] && [ "$OVERWRITE_SCRIPTS" = false ]; then
+        echo "    ⚠️  ~/.agent-os/scripts/peer/${script} already exists - skipping"
+    else
+        curl -s -o "$HOME/.agent-os/scripts/peer/${script}" "${BASE_URL}/scripts/peer/${script}"
+        chmod +x "$HOME/.agent-os/scripts/peer/${script}"
+        if [ -f "$HOME/.agent-os/scripts/peer/${script}" ] && [ "$OVERWRITE_SCRIPTS" = true ]; then
+            echo "    ✓ ~/.agent-os/scripts/peer/${script} (overwritten)"
+        else
+            echo "    ✓ ~/.agent-os/scripts/peer/${script}"
+        fi
+    fi
+done
+```
+
 ### Required Updates to setup-claude-code.sh
 
 The following files need to be added to the Claude Code setup script:
@@ -657,6 +826,14 @@ The following files are created by the PEER pattern implementation and need to b
 - `claude-code/agents/peer-executor.md` - Execution phase agent  
 - `claude-code/agents/peer-express.md` - Express phase agent
 - `claude-code/agents/peer-review.md` - Review phase agent
+
+#### Script Files
+- `scripts/peer/check-nats-health.sh` - NATS health check with caching
+- `scripts/peer/setup-kv-bucket.sh` - KV bucket setup
+- `scripts/peer/parse-arguments.sh` - Argument parsing
+- `scripts/peer/determine-context.sh` - Context determination
+- `scripts/peer/initialize-cycle.sh` - Cycle initialization
+- `scripts/peer/finalize-cycle.sh` - Cycle finalization
 
 #### Prerequisites
 - NATS server must be running for PEER pattern to function

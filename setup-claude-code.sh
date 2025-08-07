@@ -5,6 +5,51 @@
 
 set -e  # Exit on error
 
+# Initialize flags
+USE_LOCAL=false
+CUSTOM_BASE_URL=""
+OVERWRITE_COMMANDS=false
+OVERWRITE_AGENTS=false
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --local)
+            USE_LOCAL=true
+            shift
+            ;;
+        --base-url)
+            CUSTOM_BASE_URL="$2"
+            shift 2
+            ;;
+        --overwrite-commands)
+            OVERWRITE_COMMANDS=true
+            shift
+            ;;
+        --overwrite-agents)
+            OVERWRITE_AGENTS=true
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: $0 [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --local                     Use local repository files instead of GitHub"
+            echo "  --base-url URL              Use custom base URL for downloading files"
+            echo "  --overwrite-commands        Overwrite existing command files"
+            echo "  --overwrite-agents          Overwrite existing agent files"
+            echo "  -h, --help                  Show this help message"
+            echo ""
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
+
 echo "🚀 Agent OS Claude Code Setup"
 echo "============================="
 echo ""
@@ -24,8 +69,36 @@ if [ ! -d "$HOME/.agent-os/instructions" ] || [ ! -d "$HOME/.agent-os/standards"
     exit 1
 fi
 
-# Base URL for raw GitHub content
-BASE_URL="https://raw.githubusercontent.com/buildermethods/agent-os/main"
+# Determine base URL
+if [ "$USE_LOCAL" = true ]; then
+    # Find the script directory (repository root)
+    SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    BASE_URL="file://$SCRIPT_DIR"
+    echo "📁 Using local repository at: $SCRIPT_DIR"
+elif [ -n "$CUSTOM_BASE_URL" ]; then
+    BASE_URL="$CUSTOM_BASE_URL"
+    echo "🌐 Using custom base URL: $BASE_URL"
+else
+    # Default to GitHub
+    BASE_URL="https://raw.githubusercontent.com/buildermethods/agent-os/main"
+    echo "🌐 Using GitHub repository"
+fi
+echo ""
+
+# Function to download or copy files
+download_file() {
+    local source="$1"
+    local destination="$2"
+    
+    if [ "$USE_LOCAL" = true ]; then
+        # For local files, strip the file:// prefix and copy
+        local local_source="${source#file://}"
+        cp "$local_source" "$destination"
+    else
+        # For remote files, use curl
+        curl -s -o "$destination" "$source"
+    fi
+}
 
 # Create directories
 echo "📁 Creating directories..."
@@ -38,11 +111,15 @@ echo "📥 Downloading Claude Code command files to ~/.claude/commands/"
 
 # Commands
 for cmd in plan-product create-spec execute-tasks analyze-product peer git-commit; do
-    if [ -f "$HOME/.claude/commands/${cmd}.md" ]; then
+    if [ -f "$HOME/.claude/commands/${cmd}.md" ] && [ "$OVERWRITE_COMMANDS" = false ]; then
         echo "  ⚠️  ~/.claude/commands/${cmd}.md already exists - skipping"
     else
-        curl -s -o "$HOME/.claude/commands/${cmd}.md" "${BASE_URL}/commands/${cmd}.md"
-        echo "  ✓ ~/.claude/commands/${cmd}.md"
+        download_file "${BASE_URL}/commands/${cmd}.md" "$HOME/.claude/commands/${cmd}.md"
+        if [ -f "$HOME/.claude/commands/${cmd}.md" ] && [ "$OVERWRITE_COMMANDS" = true ]; then
+            echo "  ✓ ~/.claude/commands/${cmd}.md (overwritten)"
+        else
+            echo "  ✓ ~/.claude/commands/${cmd}.md"
+        fi
     fi
 done
 
@@ -54,11 +131,15 @@ echo "📥 Downloading Claude Code subagents to ~/.claude/agents/"
 agents=("test-runner" "context-fetcher" "git-workflow" "file-creator" "date-checker" "peer-planner" "peer-executor" "peer-express" "peer-review")
 
 for agent in "${agents[@]}"; do
-    if [ -f "$HOME/.claude/agents/${agent}.md" ]; then
+    if [ -f "$HOME/.claude/agents/${agent}.md" ] && [ "$OVERWRITE_AGENTS" = false ]; then
         echo "  ⚠️  ~/.claude/agents/${agent}.md already exists - skipping"
     else
-        curl -s -o "$HOME/.claude/agents/${agent}.md" "${BASE_URL}/claude-code/agents/${agent}.md"
-        echo "  ✓ ~/.claude/agents/${agent}.md"
+        download_file "${BASE_URL}/claude-code/agents/${agent}.md" "$HOME/.claude/agents/${agent}.md"
+        if [ -f "$HOME/.claude/agents/${agent}.md" ] && [ "$OVERWRITE_AGENTS" = true ]; then
+            echo "  ✓ ~/.claude/agents/${agent}.md (overwritten)"
+        else
+            echo "  ✓ ~/.claude/agents/${agent}.md"
+        fi
     fi
 done
 
@@ -68,6 +149,19 @@ echo ""
 echo "📍 Files installed to:"
 echo "   ~/.claude/commands/        - Claude Code commands"
 echo "   ~/.claude/agents/          - Claude Code specialized subagents"
+echo ""
+if [ "$OVERWRITE_COMMANDS" = false ] && [ "$OVERWRITE_AGENTS" = false ]; then
+    echo "💡 Note: Existing files were skipped to preserve your customizations"
+    echo "   Use --overwrite-commands, --overwrite-agents to update specific files"
+else
+    echo "💡 Note: Some files were overwritten based on your flags"
+    if [ "$OVERWRITE_COMMANDS" = false ]; then
+        echo "   Existing command files were preserved"
+    fi
+    if [ "$OVERWRITE_AGENTS" = false ]; then
+        echo "   Existing agent files were preserved"
+    fi
+fi
 echo ""
 echo "Next steps:"
 echo ""

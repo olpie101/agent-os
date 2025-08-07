@@ -13,3 +13,5 @@ encoding: UTF-8
 - Process XML blocks sequentially
 
 - Use exact templates as provided
+
+- Do not deviate from instructions.

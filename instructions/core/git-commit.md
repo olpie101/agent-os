@@ -51,82 +51,82 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
 </pre_flight_check>
 
 <process_flow>
-
-<step number="1" name="parse_arguments">
-
-### Step 1: Parse Arguments
-
-<argument_parsing>
-  PARSE command arguments:
-    - --message=<text>: Commit message (optional)
-    - --skip-precommit: Skip MCP validation even if available
+  
+  <step number="1" name="parse_arguments">
     
-  STORE parsed values for use in workflow
-</argument_parsing>
-
-</step>
-
-<step number="2" name="detect_execution_context">
-
-### Step 2: Detect Execution Context
-
-<context_detection>
-  DETERMINE execution context:
-    IF invoked through PEER pattern:
-      SET enhanced_mode = true
-      NOTE: PEER executor will handle MCP validation
-    ELSE:
-      SET enhanced_mode = false
-      PROCEED directly to git operations
-</context_detection>
-
-</step>
-
-<step number="3" name="delegate_to_git_workflow">
-
-### Step 3: Delegate to Git Workflow
-
-<delegation>
-  USE Task tool to invoke git-workflow agent:
+    ### Step 1: Parse Arguments
     
-  <Task>
-    description: "Execute git commit workflow"
-    prompt: |
-      Complete git workflow with these parameters:
-      ${message ? `- Commit message: ${message}` : '- Prompt for commit message'}
-      ${enhanced_mode ? '- Execution context: PEER-enhanced' : '- Execution context: Direct'}
-      ${skip_precommit ? '- Precommit: Skipped by user request' : ''}
-      
-      Perform the following:
-      1. Check git status and identify changed files
-      2. Stage appropriate files for commit
-      3. Create commit with provided or prompted message
-      4. Push to remote repository
-      5. Create pull request if appropriate
-      
-      Use the git-workflow agent to handle all git operations.
-    subagent_type: git-workflow
-  </Task>
-</delegation>
-
-</step>
-
-<step number="4" name="completion_summary">
-
-### Step 4: Completion Summary
-
-<summary>
-  DISPLAY completion status:
-    - Commit created successfully
-    - Branch and commit details
-    - Pull request URL if created
+    <argument_parsing>
+      PARSE command arguments:
+        - --message=<text>: Commit message (optional)
+        - --skip-precommit: Skip MCP validation even if available
+        
+      STORE parsed values for use in workflow
+    </argument_parsing>
     
-  IF enhanced_mode AND MCP was used:
-    NOTE: Validation details available in PEER cycle output
-</summary>
-
-</step>
-
+  </step>
+  
+  <step number="2" name="detect_execution_context">
+    
+    ### Step 2: Detect Execution Context
+    
+    <context_detection>
+      DETERMINE execution context:
+        IF invoked through PEER pattern:
+          SET enhanced_mode = true
+          NOTE: PEER executor will handle MCP validation
+        ELSE:
+          SET enhanced_mode = false
+          PROCEED directly to git operations
+    </context_detection>
+    
+  </step>
+  
+  <step number="3" name="delegate_to_git_workflow">
+    
+    ### Step 3: Delegate to Git Workflow
+    
+    <delegation>
+      USE Task tool to invoke git-workflow agent:
+        
+      <Task>
+        description: "Execute git commit workflow"
+        prompt: |
+          Complete git workflow with these parameters:
+          ${message ? `- Commit message: ${message}` : '- Prompt for commit message'}
+          ${enhanced_mode ? '- Execution context: PEER-enhanced' : '- Execution context: Direct'}
+          ${skip_precommit ? '- Precommit: Skipped by user request' : ''}
+          
+          Perform the following:
+          1. Check git status and identify changed files
+          2. Stage appropriate files for commit
+          3. Create commit with provided or prompted message
+          4. Push to remote repository
+          5. Create pull request if appropriate
+          
+          Use the git-workflow agent to handle all git operations.
+        subagent_type: git-workflow
+      </Task>
+    </delegation>
+    
+  </step>
+  
+  <step number="4" name="completion_summary">
+    
+    ### Step 4: Completion Summary
+    
+    <summary>
+      DISPLAY completion status:
+        - Commit created successfully
+        - Branch and commit details
+        - Pull request URL if created
+        
+      IF enhanced_mode AND MCP was used:
+        NOTE: Validation details available in PEER cycle output
+    </summary>
+    
+  </step>
+  
 </process_flow>
 
 ## Integration with PEER

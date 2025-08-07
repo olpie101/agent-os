@@ -69,30 +69,57 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
 
 ## Required Fixes Based on Test Analysis
 
-- [ ] 7. Fix peer.md instruction structure to follow working patterns
-  - [ ] 7.1 Move NATS pre-flight checks from `<pre_flight_check>` descriptions to executable `<step>` elements
-  - [ ] 7.2 Add NATS server availability check as Step 1 using Bash tool
-  - [ ] 7.3 Add NATS KV bucket creation/verification as Step 2 using Bash tool
-  - [ ] 7.4 Add argument parsing and validation as Step 3
-  - [ ] 7.5 Add context determination (spec vs non-spec instructions) as Step 4
-  - [ ] 7.6 Restructure agent invocation steps to follow create-spec.md pattern
-  - [ ] 7.7 Add cycle metadata creation and updates in each step using Bash tool
-  - [ ] 7.8 Test that NATS operations actually execute during instruction run
+- [x] 7. Create external script files for complex operations
+  - [x] 7.1 Create dev/agent-os/scripts/peer/ directory structure
+  - [x] 7.2 Write check-nats-health.sh with 24-hour caching logic
+  - [x] 7.3 Write setup-kv-bucket.sh for bucket creation and verification
+  - [x] 7.4 Write parse-arguments.sh to handle command-line arguments
+  - [x] 7.5 Write determine-context.sh for instruction classification
+  - [x] 7.6 Write initialize-cycle.sh for PEER cycle setup
+  - [x] 7.7 Write finalize-cycle.sh for cycle completion
+  - [x] 7.8 Add self-documentation headers to all scripts
+  - [x] 7.9 Test scripts independently to ensure proper functionality
 
-- [ ] 8. Fix Task tool agent parameter passing
-  - [ ] 8.1 Review how create-spec.md passes parameters to subagents via Task tool
-  - [ ] 8.2 Update peer.md Task tool calls to match working parameter patterns
-  - [ ] 8.3 Ensure agents receive context in the format they expect
-  - [ ] 8.4 Test agent parameter passing with structured data
+- [x] 8. Fix peer.md instruction structure to use external scripts
+  - [x] 8.1 Replace complex inline bash with script calls in Step 1 (NATS health)
+  - [x] 8.2 Replace bucket setup logic with script call in Step 2
+  - [x] 8.3 Use parse-arguments.sh in Step 3 instead of inline parsing
+  - [x] 8.4 Use determine-context.sh in Step 4 for classification
+  - [x] 8.5 Use initialize-cycle.sh in Step 5 for cycle creation
+  - [x] 8.6 Update agent invocation steps to use context from scripts
+  - [x] 8.7 Use finalize-cycle.sh in final step for cleanup
+  - [ ] 8.8 Test that scripts execute properly through instruction
 
-- [ ] 9. Resolve PEER vs instruction workflow conflicts
-  - [ ] 9.1 Handle create-spec user review conflict (spec review happens inside create-spec, not in PEER review)
-  - [ ] 9.2 Clarify PEER review phase purpose when wrapped instruction already has review steps
-  - [ ] 9.3 Test PEER with instructions that don't have built-in user review (analyze-product)
-  - [ ] 9.4 Document when PEER review adds value vs when it conflicts
+- [x] 9. Fix Task tool agent parameter passing
+  - [x] 9.1 Review how create-spec.md passes parameters to subagents via Task tool
+  - [x] 9.2 Update peer.md Task tool calls to match working parameter patterns
+  - [x] 9.3 Ensure agents receive context in the format they expect
+  - [ ] 9.4 Test agent parameter passing with structured data
 
-- [ ] 10. Validate executable instruction approach
-  - [ ] 10.1 Compare peer.md structure with working instructions (create-spec.md, execute-tasks.md) 
-  - [ ] 10.2 Ensure all NATS operations use actual Bash tool calls, not descriptions
-  - [ ] 10.3 Test `/peer --continue` functionality works with proper state persistence
-  - [ ] 10.4 Verify pre-flight execution actually happens before process flow
+- [ ] 10. Resolve PEER vs instruction workflow conflicts
+  - [ ] 10.1 Handle create-spec user review conflict (spec review happens inside create-spec, not in PEER review)
+  - [ ] 10.2 Clarify PEER review phase purpose when wrapped instruction already has review steps
+  - [ ] 10.3 Test PEER with instructions that don't have built-in user review (analyze-product)
+  - [ ] 10.4 Document when PEER review adds value vs when it conflicts
+
+- [ ] 11. Validate executable instruction approach
+  - [ ] 11.1 Compare peer.md structure with working instructions (create-spec.md, execute-tasks.md) 
+  - [ ] 11.2 Ensure all NATS operations use actual Bash tool calls, not descriptions
+  - [ ] 11.3 Test `/peer --continue` functionality works with proper state persistence
+  - [ ] 11.4 Verify pre-flight execution actually happens before process flow
+
+- [x] 12. Update installation scripts for script files
+  - [x] 12.1 Add scripts directory creation to setup.sh
+  - [x] 12.2 Add script download loop to setup.sh
+  - [x] 12.3 Set executable permissions on downloaded scripts
+  - [x] 12.4 Add script verification to installation process
+  - [ ] 12.5 Test complete installation on clean system
+
+- [x] 13. Implement trap-based cleanup for script-local temp files
+  - [x] 13.1 Add trap cleanup to setup-kv-bucket.sh for /tmp/bucket_info.txt
+  - [x] 13.2 Add trap cleanup to initialize-cycle.sh for JSON files (/tmp/current_meta.json, /tmp/existing_meta.json, /tmp/updated_meta.json, /tmp/new_cycle.json)
+  - [x] 13.3 Add trap cleanup to finalize-cycle.sh for JSON files (/tmp/final_meta.json, /tmp/final_meta_updated.json, /tmp/final_cycle.json, /tmp/final_cycle_updated.json)
+  - [x] 13.4 Ensure communication files (/tmp/peer_*.txt) are NOT cleaned by trap handlers
+  - [x] 13.5 Update finalize-cycle.sh to clean communication files only on successful completion
+  - [x] 13.6 Test trap cleanup functions work correctly on both normal exit and error conditions
+  - [x] 13.7 Verify no file contamination occurs between script runs
