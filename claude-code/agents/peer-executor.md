@@ -322,6 +322,20 @@ Execute the target instruction through the Task tool with appropriate context.
       Follow the instruction guidelines in @~/.agent-os/instructions/core/execute-tasks.md
   </for_execute_tasks>
   
+  <for_refine_spec if="instruction_name == 'refine-spec'">
+    SET delegation_prompt = |
+      Execute the refine-spec instruction with these parameters:
+      - Arguments: ${instruction_args}
+      - Spec: ${spec_name}
+      
+      REVIEW RECOMMENDATIONS:
+      ${review_recommendations ? review_recommendations : "No previous review recommendations available"}
+      
+      IMPORTANT: Preserve existing task completion status while refining documentation.
+      
+      Follow the instruction guidelines in @~/.agent-os/instructions/core/refine-spec.md
+  </for_refine_spec>
+  
   <default>
     SET delegation_prompt = |
       Execute the ${instruction_name} instruction with these parameters:
@@ -389,10 +403,21 @@ Process the outputs from instruction execution into structured format.
   </merge_with_partial>
 </result_processing>
 
+<write_execution_files>
+  <prepare_environment>
+    CREATE_DIR ./tmp/peer-executor
+  </prepare_environment>
+  
+  <write_execution_output>
+    WRITE_TOOL ./tmp/peer-executor/execution_output_cycle_[CYCLE_NUMBER].json WITH:
+      ${execution_output}
+  </write_execution_output>
+</write_execution_files>
+
 <instructions>
-  ACTION: Process execution results into structured format
+  ACTION: Process execution results and write to file
   MERGE: With partial results if continuing
-  PREPARE: Final execution output for storage
+  PREPARE: File for state storage in next step
 </instructions>
 
 </step>
@@ -404,27 +429,38 @@ Process the outputs from instruction execution into structured format.
 Store the execution results in unified state.
 
 <state_finalization>
+  # Use file created in Step 7 with cycle-specific name
+  EXEC_FILE="./tmp/peer-executor/execution_output_cycle_[CYCLE_NUMBER].json"
+  
   # Define JQ filter for final update (Phase Ownership Rule: Only modify phases.execute)
+  # Note: --slurpfile creates arrays, so use $exec_output[0]
   JQ_FILTER='
     .metadata.status = "EXPRESSING" |
     .metadata.current_phase = "express" |
     .metadata.updated_at = (now | todate) |
     .phases.execute.status = "completed" |
     .phases.execute.completed_at = (now | todate) |
-    .phases.execute.output = $exec_output
+    .phases.execute.output = $exec_output[0]
   '
   
-  # Use wrapper script for updating state with execution results
-  result=$(~/.agent-os/scripts/peer/update-state.sh "${STATE_KEY}" "${JQ_FILTER}" --argjson exec_output "${execution_output}")
-  if [ $? -ne 0 ]; then
+  # Use wrapper script with file injection
+  result=$(~/.agent-os/scripts/peer/update-state.sh "${STATE_KEY}" "${JQ_FILTER}" \
+    --json-file "exec_output=${EXEC_FILE}")
+  UPDATE_EXIT=$?
+  
+  # Clean up cycle-specific temporary file
+  rm -f "${EXEC_FILE}"
+  
+  if [ $UPDATE_EXIT -ne 0 ]; then
     echo "ERROR: Failed to update state with execution results" >&2
     exit 1
   fi
 </state_finalization>
 
 <instructions>
-  ACTION: Update unified state with execution results using wrapper script
-  USE: JQ filter for safe JSON manipulation
+  ACTION: Update state using cycle-specific file from Step 7
+  USE: Wrapper script with --json-file injection
+  CLEANUP: Remove cycle-specific temporary file after use
 </instructions>
 
 </step>

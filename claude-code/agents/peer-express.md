@@ -13,6 +13,7 @@ This agent uses the unified state schema defined in @~/.agent-os/instructions/me
 <pre_flight_check>
   EXECUTE: @~/.agent-os/instructions/meta/pre-flight.md
   ALSO_EXECUTE: @~/.agent-os/instructions/meta/nats-kv-operations.md
+  ALSO_EXECUTE: @~/.agent-os/instructions/meta/json-creation-standards.md
 </pre_flight_check>
 
 ## Core Responsibilities
@@ -204,6 +205,8 @@ Analyze execution results to determine presentation strategy.
       SET next_steps = "Test implementation and prepare for deployment"
     ELIF instruction_name == "analyze-product":
       SET next_steps = "Review findings and prioritize recommendations"
+    ELIF instruction_name == "refine-spec":
+      SET next_steps = "Review refined spec and continue with implementation"
     ELSE:
       SET next_steps = "Review results and determine next action"
   </next_steps_determination>
@@ -274,6 +277,25 @@ Create formatted presentation using declarative templates.
         }
     </for_execute_tasks>
     
+    <for_refine_spec if="instruction_name == 'refine-spec'">
+      FORMAT: |
+        ## 📝 Spec Refinement Complete
+        
+        **Spec:** ${spec_name}
+        **Files Updated:** ${list_updated_files()}
+        
+        ### 🔄 Key Changes
+        ${list_key_changes()}
+        
+        ### ✅ Refinements Applied
+        ${list_refinements()}
+        
+        ### 📊 Task Status
+        - Preserved: ${count_preserved_tasks()}
+        - Modified: ${count_modified_tasks()}
+        - Added: ${count_new_tasks()}
+    </for_refine_spec>
+    
     <default>
       FORMAT: |
         ## 📦 Deliverables
@@ -318,22 +340,26 @@ Create formatted presentation using declarative templates.
 
 ### Step 6: Create Formatted Output
 
-Combine all sections into final presentation.
+Combine all sections into final presentation and write to files.
 
 <output_creation>
+  <prepare_environment>
+    CREATE_DIR ./tmp/peer-express
+  </prepare_environment>
+
   <combine_sections>
-    SET formatted_output = join([
-      executive_summary,
-      key_accomplishments,
-      deliverables_section,
-      important_details,
-      issues_section,
-      next_steps
-    ], "\n\n")
+    COMBINE formatted_output FROM:
+      - executive_summary
+      - key_accomplishments
+      - deliverables_section
+      - important_details (if exists)
+      - issues_section (if exists)
+      - next_steps
+    WITH_SEPARATOR "\n\n"
   </combine_sections>
   
   <create_express_output>
-    SET express_output = {
+    CREATE express_output AS {
       "summary": extract_summary_text(executive_summary),
       "key_points": extract_bullet_points(key_accomplishments),
       "deliverables": {
@@ -344,26 +370,20 @@ Combine all sections into final presentation.
       "formatted_output": formatted_output,
       "instruction_type": instruction_name,
       "has_issues": (identified_issues.length > 0),
-      "completion_percentage": calculate_completion_percentage()
-    }
-  </create_express_output>
-  
-  <create_cycle_result>
-    SET cycle_result = {
+      "completion_percentage": calculate_completion_percentage(),
       "success": (execution_output.execution_status == "success"),
-      "instruction": instruction_name,
-      "summary": express_output.summary,
-      "highlights": express_output.key_points.slice(0, 3),
-      "completion": express_output.completion_percentage,
+      "highlights": extract_bullet_points(key_accomplishments),
       "next_action": extract_primary_next_step()
     }
-  </create_cycle_result>
+    WRITE_TOOL ./tmp/peer-express/express_output_cycle_[CYCLE_NUMBER].json
+  </create_express_output>
 </output_creation>
 
 <instructions>
-  ACTION: Combine sections into formatted output
-  CREATE: Express output and cycle result objects
-  PREPARE: For state storage
+  ACTION: Combine sections and create output file
+  CREATE: One JSON file following json-creation-standards.md
+  LOCATION: ./tmp/peer-express/ directory (project root)
+  NOTE: Agent implements JSON creation per standard
 </instructions>
 
 </step>
@@ -372,33 +392,41 @@ Combine all sections into final presentation.
 
 ### Step 7: Update State with Expression Results
 
-Store the formatted presentation in unified state.
+Store the formatted presentation in unified state using files from Step 6.
 
 <state_update>
+  # Use file created in Step 6 with deterministic name
+  EXPRESS_FILE="./tmp/peer-express/express_output_cycle_[CYCLE_NUMBER].json"
+  
   # Define JQ filter for updating state (Phase Ownership Rule: Only modify phases.express)
+  # Note: --slurpfile creates arrays, so use $express_out[0]
   JQ_FILTER='
     .metadata.status = "REVIEWING" |
     .metadata.current_phase = "review" |
     .metadata.updated_at = (now | todate) |
     .phases.express.status = "completed" |
     .phases.express.completed_at = (now | todate) |
-    .phases.express.output = $express_out |
-    .result = $cycle_res
+    .phases.express.output = $express_out[0]
   '
   
-  # Use wrapper script for updating state with expression results
+  # Use wrapper script with files from Step 6
   result=$(~/.agent-os/scripts/peer/update-state.sh "${STATE_KEY}" "${JQ_FILTER}" \
-    --argjson express_out "${express_output}" \
-    --argjson cycle_res "${cycle_result}")
-  if [ $? -ne 0 ]; then
+    --json-file "express_out=${EXPRESS_FILE}")
+  UPDATE_EXIT=$?
+  
+  # Clean up temporary files
+  rm -f "${EXPRESS_FILE}"
+  
+  if [ $UPDATE_EXIT -ne 0 ]; then
     echo "ERROR: Failed to update state with expression results" >&2
     exit 1
   fi
 </state_update>
 
 <instructions>
-  ACTION: Update unified state with expression results using wrapper script
-  USE: JQ filter for safe JSON manipulation
+  ACTION: Update state using files from Step 6
+  USE: Wrapper script with --json-file injection
+  CLEANUP: Remove temporary files after use
 </instructions>
 
 </step>
@@ -552,6 +580,5 @@ Update state with error information if expression failed.
 3. **Be Complete**: Include all relevant information
 4. **Be Actionable**: Always provide next steps
 5. **Be Consistent**: Use the same format structure
-6. **No Temp Files**: All data from unified state
 
 Remember: Your role is to make the results accessible and actionable. Transform raw execution data into a presentation that guides the user toward successful project completion. Follow the v1 simplified approach with clear phase ownership and simple read-modify-write patterns.

@@ -218,6 +218,14 @@ Customize review criteria based on instruction type.
       }
     </for_git_commit>
     
+    <for_refine_spec if="instruction_name == 'refine-spec'">
+      SET review_focus = {
+        "focus_areas": ["requirement_alignment", "documentation_consistency", "task_preservation"],
+        "quality_metrics": ["changes_completeness", "technical_feasibility", "clarity_improvement"],
+        "success_indicators": ["requirements_addressed", "tasks_properly_preserved", "consistency_maintained"]
+      }
+    </for_refine_spec>
+    
     <default>
       SET review_focus = {
         "focus_areas": ["completeness", "quality", "efficiency"],
@@ -432,9 +440,104 @@ Format the review assessment and insights.
         "process": recommendations.process_improvements,
         "technical": recommendations.technical_suggestions,
         "efficiency": recommendations.efficiency_opportunities
-      }
+      },
+      "alternative_approaches": generate_alternative_approaches(),
+      "rationale": provide_recommendation_rationale()
     }
+    
+    FUNCTION generate_clarification_questions():
+      questions = []
+      
+      IF instruction_name == "create-spec":
+        questions.append("Would you prefer more detailed code examples in technical specifications?")
+        questions.append("Should API contracts include sample request/response payloads?")
+      
+      IF has_ambiguous_requirements:
+        questions.append("Could you clarify the priority of ${ambiguous_feature}?")
+      
+      IF has_technical_constraints:
+        questions.append("Are there specific performance requirements we should consider?")
+      
+      IF instruction_name == "refine-spec":
+        questions.append("Should future spec refinements include alternative solution approaches?")
+      
+      RETURN questions.filter(q => q.is_actionable && q.requires_user_input)
+    
+    FUNCTION generate_alternative_approaches():
+      IF instruction_name == "execute-tasks" && has_implementation_choices:
+        RETURN {
+          "recommended": primary_approach,
+          "alternatives": [
+            {
+              "approach": alternative_1,
+              "pros": pros_list_1,
+              "cons": cons_list_1,
+              "when_to_use": use_case_1
+            }
+          ],
+          "rationale": "Recommended approach chosen for ${reason}"
+        }
+      ELSE:
+        RETURN null
+    
+    FUNCTION provide_recommendation_rationale():
+      rationale = {}
+      
+      FOR each recommendation in recommendations:
+        rationale[recommendation.id] = {
+          "why": recommendation.reasoning,
+          "impact": recommendation.expected_impact,
+          "effort": recommendation.estimated_effort,
+          "priority": recommendation.priority_level
+        }
+      
+      RETURN rationale
   </insights_collection>
+  
+  <cycle_summary_creation>
+    SET cycle_summary = {
+      "success": (execution_output.execution_status == "success" && overall_score >= 70),
+      "instruction": instruction_name,
+      "summary": generate_cycle_summary_text(),
+      "highlights": extract_top_highlights_from_phases(),
+      "completion": calculate_overall_completion_percentage(),
+      "next_action": determine_next_action_based_on_review()
+    }
+    
+    FUNCTION generate_cycle_summary_text():
+      IF instruction_name == "create-spec":
+        RETURN "Created comprehensive spec documentation with ${task_count} tasks defined"
+      ELSE IF instruction_name == "execute-tasks":
+        RETURN "Executed ${completed_tasks} tasks with ${overall_score}% quality score"
+      ELSE IF instruction_name == "refine-spec":
+        RETURN "Refined spec based on ${recommendation_count} review recommendations"
+      ELSE:
+        RETURN "Completed ${instruction_name} with ${overall_score}% quality score"
+    
+    FUNCTION extract_top_highlights_from_phases():
+      highlights = []
+      IF express_output.key_points:
+        highlights.append(express_output.key_points)
+      IF execution_output.outputs.files_created.length > 0:
+        highlights.append("Created ${file_count} files")
+      RETURN highlights
+    
+    FUNCTION calculate_overall_completion_percentage():
+      IF execution_output.outputs.tasks_completed:
+        RETURN (completed_tasks / total_tasks) * 100
+      ELSE:
+        RETURN completion_percentage
+    
+    FUNCTION determine_next_action_based_on_review():
+      IF overall_score < 70:
+        RETURN "Address critical improvements before proceeding"
+      ELSE IF instruction_name == "create-spec":
+        RETURN "Review spec and proceed with /peer --instruction=execute-tasks"
+      ELSE IF improvements.length > 3:
+        RETURN "Consider addressing improvements with /peer --instruction=refine-spec"
+      ELSE:
+        RETURN "Ready to proceed with next phase"
+  </cycle_summary_creation>
   
   <formatted_review>
     CREATE: |
@@ -466,10 +569,31 @@ Format the review assessment and insights.
   </formatted_review>
 </output_creation>
 
+<write_review_files>
+  <prepare_environment>
+    CREATE_DIR ./tmp/peer-review
+  </prepare_environment>
+  
+  <write_review_output>
+    WRITE_TOOL ./tmp/peer-review/review_output_cycle_[CYCLE_NUMBER].json WITH:
+      ${review_output}
+  </write_review_output>
+  
+  <write_insights>
+    WRITE_TOOL ./tmp/peer-review/insights_cycle_[CYCLE_NUMBER].json WITH:
+      ${insights}
+  </write_insights>
+  
+  <write_cycle_summary>
+    WRITE_TOOL ./tmp/peer-review/cycle_summary_cycle_[CYCLE_NUMBER].json WITH:
+      ${cycle_summary}
+  </write_cycle_summary>
+</write_review_files>
+
 <instructions>
-  ACTION: Create structured review output
+  ACTION: Create structured review output and write to files
   FORMAT: Assessment, insights, and recommendations
-  PREPARE: For state storage and display
+  PREPARE: Files for state storage in next step
 </instructions>
 
 </step>
@@ -481,29 +605,44 @@ Format the review assessment and insights.
 Store the review assessment and mark cycle complete.
 
 <state_finalization>
-  # Define JQ filter for final update (Phase Ownership Rule: Only modify phases.review)
+  # Use files created in Step 8 with cycle-specific names
+  REVIEW_FILE="./tmp/peer-review/review_output_cycle_[CYCLE_NUMBER].json"
+  INSIGHTS_FILE="./tmp/peer-review/insights_cycle_[CYCLE_NUMBER].json"
+  SUMMARY_FILE="./tmp/peer-review/cycle_summary_cycle_[CYCLE_NUMBER].json"
+  
+  # Define JQ filter for final update (Review phase owns cycle_summary)
+  # Note: --slurpfile creates arrays, so use $review_out[0], $insights_data[0], and $summary_data[0]
   JQ_FILTER='
     .metadata.status = "COMPLETE" |
     .metadata.completed_at = (now | todate) |
     .metadata.updated_at = (now | todate) |
     .phases.review.status = "completed" |
     .phases.review.completed_at = (now | todate) |
-    .phases.review.output = $review_out |
-    .insights = $insights_data
+    .phases.review.output = $review_out[0] |
+    .insights = $insights_data[0] |
+    .cycle_summary = $summary_data[0]
   '
   
-  # Use wrapper script for updating state with review results
+  # Use wrapper script with file injection
   result=$(~/.agent-os/scripts/peer/update-state.sh "${STATE_KEY}" "${JQ_FILTER}" \
-    --argjson review_out "${review_output}" \
-    --argjson insights_data "${insights}")
-  if [ $? -ne 0 ]; then
+    --json-file "review_out=${REVIEW_FILE}" \
+    --json-file "insights_data=${INSIGHTS_FILE}" \
+    --json-file "summary_data=${SUMMARY_FILE}")
+  UPDATE_EXIT=$?
+  
+  # Clean up cycle-specific temporary files
+  rm -f "${REVIEW_FILE}" "${INSIGHTS_FILE}" "${SUMMARY_FILE}"
+  
+  if [ $UPDATE_EXIT -ne 0 ]; then
     echo "ERROR: Failed to update state with review results" >&2
     exit 1
   fi
 </state_finalization>
 
 <instructions>
-  ACTION: Update unified state with review results
+  ACTION: Update state using cycle-specific files from Step 8
+  USE: Wrapper script with --json-file injection
+  CLEANUP: Remove cycle-specific temporary files after use
   MARK: Cycle as complete
 </instructions>
 

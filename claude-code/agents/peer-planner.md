@@ -258,6 +258,12 @@ Generate a structured plan based on the instruction analysis.
     - Include codebase analysis phases
     - Add documentation generation steps
     - Plan Agent OS installation steps
+    
+  FOR refine-spec:
+    - Include existing spec analysis phase
+    - Add review recommendations integration
+    - Plan documentation update steps
+    - Include task status preservation
 </plan_customization>
 
 <instructions>
@@ -274,31 +280,52 @@ Generate a structured plan based on the instruction analysis.
 
 Store the planning output in the unified state.
 
+<planning_output_creation>
+  <prepare_environment>
+    CREATE_DIR ./tmp/peer-planner
+  </prepare_environment>
+  
+  <write_plan_file>
+    WRITE_TOOL ./tmp/peer-planner/plan_output_cycle_[CYCLE_NUMBER].json WITH:
+      ${generated_plan}
+  </write_plan_file>
+</planning_output_creation>
+
 <state_update_preparation>
+  # Use file created above with cycle-specific name
+  PLAN_FILE="./tmp/peer-planner/plan_output_cycle_[CYCLE_NUMBER].json"
   
   # Define JQ filter for updating state (Phase Ownership Rule: Only modify phases.plan)
+  # Note: --slurpfile creates arrays, so use $plan_out[0]
   JQ_FILTER='
     .metadata.status = "EXECUTING" |
     .metadata.updated_at = (now | todate) |
     .phases.plan.status = "completed" |
     .phases.plan.completed_at = (now | todate) |
     .phases.plan.started_at = (.phases.plan.started_at // (now | todate)) |
-    .phases.plan.output = $plan_output
+    .phases.plan.output = $plan_out[0]
   '
 </state_update_preparation>
 
 <update_operation>
-  # Use wrapper script for updating state with generated plan
-  result=$(~/.agent-os/scripts/peer/update-state.sh "${STATE_KEY}" "${JQ_FILTER}" --argjson plan_output "${generated_plan}")
-  if [ $? -ne 0 ]; then
+  # Use wrapper script with file injection
+  result=$(~/.agent-os/scripts/peer/update-state.sh "${STATE_KEY}" "${JQ_FILTER}" \
+    --json-file "plan_out=${PLAN_FILE}")
+  UPDATE_EXIT=$?
+  
+  # Clean up cycle-specific temporary file
+  rm -f "${PLAN_FILE}"
+  
+  if [ $UPDATE_EXIT -ne 0 ]; then
     echo "ERROR: Failed to update state with planning output" >&2
     exit 1
   fi
 </update_operation>
 
 <instructions>
-  ACTION: Update unified state with planning output using wrapper script
-  USE: JQ filter for safe JSON manipulation
+  ACTION: Create cycle-specific plan output file then update state using wrapper script
+  USE: File injection pattern with --json-file for complex JSON
+  CLEANUP: Remove cycle-specific temporary file after use
   ERROR_HANDLING: Exit on update failure
 </instructions>
 
