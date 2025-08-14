@@ -198,77 +198,76 @@ Create or determine the PEER cycle for this execution and set up initial state.
       PROVIDE: "Start a new cycle with --instruction"
       STOP execution
   ELSE:
-    DETERMINE: New cycle number using cycle number determination logic
-    CREATE: New cycle with determined number
-    INITIALIZE: Unified state object in NATS KV
-</cycle_logic>
-
-<cycle_number_determination>
-  # Read current cycle from [KEY_PREFIX].cycle.current
-  CURRENT_CYCLE_KEY="[KEY_PREFIX].cycle.current"
-  CURRENT_CYCLE=$(~/.agent-os/scripts/peer/read-state.sh "$CURRENT_CYCLE_KEY" 2>/dev/null || echo "")
-  
-  # Handle first cycle (returns null/empty) case
-  IF [ -z "$CURRENT_CYCLE" ] || [ "$CURRENT_CYCLE" = "null" ]; then
-    NEW_CYCLE_NUMBER=1
-  ELSE:
-    # Increment cycle number correctly
-    NEW_CYCLE_NUMBER=$((CURRENT_CYCLE + 1))
-  fi
-  
-  # Add safety check to prevent duplicate cycle numbers
-  TEST_CYCLE_KEY="[KEY_PREFIX].cycle.$NEW_CYCLE_NUMBER"
-  EXISTING_STATE=$(~/.agent-os/scripts/peer/read-state.sh "$TEST_CYCLE_KEY" 2>/dev/null || echo "")
-  IF [ -n "$EXISTING_STATE" ] && [ "$EXISTING_STATE" != "null" ]; then
-    ERROR: "Cycle $NEW_CYCLE_NUMBER already exists. State may be corrupted."
-    PROVIDE: "Please check NATS KV state manually"
-    STOP execution
-  fi
-  
-  CYCLE_NUMBER=$NEW_CYCLE_NUMBER
-  
-  # Store new cycle number in [KEY_PREFIX].cycle.current after creating the state
-</cycle_number_determination>
-
-<unified_state_initialization>
-  CREATE unified state object (see @~/.agent-os/instructions/meta/unified_state_schema.md):
-  {
-    "version": 1,
-    "cycle_id": "[KEY_PREFIX].cycle.[CYCLE_NUMBER]",
-    "metadata": {
-      "instruction_name": "[INSTRUCTION_NAME]",
-      "spec_name": "[SPEC_NAME]",  // if applicable
-      "key_prefix": "[KEY_PREFIX]",
-      "cycle_number": [CYCLE_NUMBER],
-      "created_at": "[ISO_TIMESTAMP]",
-      "updated_at": "[ISO_TIMESTAMP]",
-      "status": "INITIALIZED",
-      "current_phase": "planning"
-    },
-    "context": {
-      "peer_mode": "[PEER_MODE]",
-      "spec_aware": [SPEC_AWARE],
-      "user_requirements": "[ORIGINAL_USER_INPUT]"
-    },
-    "phases": {
-      "plan": {"status": "pending"},
-      "execute": {"status": "pending"},
-      "express": {"status": "pending"},
-      "review": {"status": "pending"}
+    # NEW CYCLE CREATION - All logic inside ELSE block
+    
+    # First: Determine the cycle number
+    CURRENT_CYCLE_KEY="[KEY_PREFIX].cycle.current"
+    CURRENT_CYCLE=$(~/.agent-os/scripts/peer/read-state.sh "$CURRENT_CYCLE_KEY" 2>/dev/null || echo "")
+    
+    # Handle first cycle (returns null/empty) case
+    IF [ -z "$CURRENT_CYCLE" ] || [ "$CURRENT_CYCLE" = "null" ]; then
+      NEW_CYCLE_NUMBER=1
+    ELSE:
+      # Increment cycle number correctly
+      NEW_CYCLE_NUMBER=$((CURRENT_CYCLE + 1))
+    fi
+    
+    # Add safety check to prevent duplicate cycle numbers
+    TEST_CYCLE_KEY="[KEY_PREFIX].cycle.$NEW_CYCLE_NUMBER"
+    EXISTING_STATE=$(~/.agent-os/scripts/peer/read-state.sh "$TEST_CYCLE_KEY" 2>/dev/null || echo "")
+    IF [ -n "$EXISTING_STATE" ] && [ "$EXISTING_STATE" != "null" ]; then
+      ERROR: "Cycle $NEW_CYCLE_NUMBER already exists. State may be corrupted."
+      PROVIDE: "Please check NATS KV state manually"
+      STOP execution
+    fi
+    
+    CYCLE_NUMBER=$NEW_CYCLE_NUMBER
+    
+    # Second: Create the unified state object
+    CREATE unified state object (see @~/.agent-os/instructions/meta/unified_state_schema.md):
+    {
+      "version": 1,
+      "cycle_id": "[KEY_PREFIX].cycle.[CYCLE_NUMBER]",
+      "metadata": {
+        "instruction_name": "[INSTRUCTION_NAME]",
+        "spec_name": "[SPEC_NAME]",  // if applicable
+        "key_prefix": "[KEY_PREFIX]",
+        "cycle_number": [CYCLE_NUMBER],
+        "created_at": "[ISO_TIMESTAMP]",
+        "updated_at": "[ISO_TIMESTAMP]",
+        "status": "INITIALIZED",
+        "current_phase": "planning"
+      },
+      "context": {
+        "peer_mode": "[PEER_MODE]",
+        "spec_aware": [SPEC_AWARE],
+        "user_requirements": "[ORIGINAL_USER_INPUT]"
+      },
+      "phases": {
+        "plan": {"status": "pending"},
+        "execute": {"status": "pending"},
+        "express": {"status": "pending"},
+        "review": {"status": "pending"}
+      }
     }
-  }
-  
-  STORE using: ~/.agent-os/scripts/peer/create-state.sh "[KEY_PREFIX].cycle.[CYCLE_NUMBER]" "{unified_state}"
-  
-  # Store new cycle number in [KEY_PREFIX].cycle.current
-  ~/.agent-os/scripts/peer/create-state.sh "[KEY_PREFIX].cycle.current" "$CYCLE_NUMBER"
-</unified_state_initialization>
+    
+    # Third: Store the unified state
+    STORE using: ~/.agent-os/scripts/peer/create-state.sh "[KEY_PREFIX].cycle.[CYCLE_NUMBER]" "{unified_state}"
+    
+    # Fourth: Store new cycle number as current
+    # Note: Using direct nats kv put here as the value is a simple integer, not JSON
+    echo "$CYCLE_NUMBER" | nats kv put agent-os-peer-state "[KEY_PREFIX].cycle.current"
+    
+    # Set CYCLE_NUMBER for use in subsequent steps
+    EXPORT: CYCLE_NUMBER for downstream steps
+</cycle_logic>
 
 <instructions>
   ACTION: Initialize or resume PEER cycle
   DETERMINE: New cycle or continuation
   STORE: Cycle metadata for phase coordination
   OUTPUT: Cycle number and initial status
+  ENSURE: State is created before proceeding to Step 7
 </instructions>
 
 </step>
@@ -489,6 +488,9 @@ Complete the PEER cycle by updating final state and providing summary.
   # Read current state using wrapper script
   STATE=$(~/.agent-os/scripts/peer/read-state.sh "[KEY_PREFIX].cycle.[CYCLE_NUMBER]")
   
+  # Extract cycle_summary if available
+  CYCLE_SUMMARY=$(echo "$STATE" | jq -r '.cycle_summary // empty')
+  
   # Update state using wrapper script with JQ filter
   JQ_FILTER='
     .metadata.status = "COMPLETED" |
@@ -505,10 +507,24 @@ Complete the PEER cycle by updating final state and providing summary.
   **Instruction:** [INSTRUCTION_NAME]
   **Spec:** [SPEC_NAME] (if applicable)
   
-  ✅ Planning phase completed
-  ✅ Execution phase completed
-  ✅ Express phase completed
-  ✅ Review phase completed
+  IF [ -n "$CYCLE_SUMMARY" ] && [ "$CYCLE_SUMMARY" != "null" ]; then
+    DISPLAY: |
+      ### 📊 Cycle Summary
+      
+      **Status:** [SUCCESS/FAILED based on cycle_summary.success]
+      **Summary:** [EXTRACT cycle_summary.summary]
+      **Completion:** [EXTRACT cycle_summary.completion]%
+      
+      **Key Highlights:**
+      [LIST cycle_summary.highlights]
+      
+      **Next Action:** [EXTRACT cycle_summary.next_action]
+  ELSE:
+    DISPLAY: |
+      ✅ Planning phase completed
+      ✅ Execution phase completed
+      ✅ Express phase completed
+      ✅ Review phase completed
   
   All outputs stored in NATS KV under: [KEY_PREFIX].cycle.[CYCLE_NUMBER]
 </final_summary>
@@ -529,15 +545,16 @@ Complete the PEER cycle by updating final state and providing summary.
 Extract and display review results to the user for transparency and continuous improvement.
 
 <review_extraction>
-  # Read the unified state to extract review output
+  # Read the unified state to extract review output and insights
   STATE=$(~/.agent-os/scripts/peer/read-state.sh "[KEY_PREFIX].cycle.[CYCLE_NUMBER]")
   REVIEW_OUTPUT=$(echo "$STATE" | jq -r '.phases.review.output // empty')
+  INSIGHTS=$(echo "$STATE" | jq -r '.insights // empty')
   
   IF [ -z "$REVIEW_OUTPUT" ] || [ "$REVIEW_OUTPUT" = "null" ]; then
     DISPLAY: "Review phase completed but no detailed output available."
     PROCEED: To process flow end
   ELSE:
-    FORMAT: Review results for user display
+    FORMAT: Review results and insights for user display
   fi
 </review_extraction>
 
@@ -555,17 +572,48 @@ Extract and display review results to the user for transparency and continuous i
   ### 💡 Recommendations
   [LIST from review.output.recommendations]
   
-  ### 📝 Additional Insights
-  [DISPLAY review.output.insights if available]
+  IF [ -n "$INSIGHTS" ] && [ "$INSIGHTS" != "null" ]; then
+    DISPLAY: |
+      
+      ---
+      
+      ## ❓ QUESTIONS REQUIRING YOUR INPUT
+      **[HIGH VISIBILITY - PLEASE RESPOND]**
+      
+      [LIST from insights.questions_for_user]
+      
+      ### 🎯 Recommendations & Insights
+      
+      **Process Improvements:**
+      [LIST from insights.recommendations.process]
+      
+      **Technical Suggestions:**
+      [LIST from insights.recommendations.technical]
+      
+      **Efficiency Opportunities:**
+      [LIST from insights.recommendations.efficiency]
+      
+      ### 📚 Learnings from This Cycle
+      [LIST from insights.learnings]
+      
+      ### 🔍 Patterns Identified
+      **Success Patterns:**
+      [LIST from insights.patterns.success]
+      
+      **Improvement Patterns:**
+      [LIST from insights.patterns.improvement]
   
   ---
   💡 **Tip:** Use `/peer --instruction=refine-spec` to incorporate these recommendations into your spec.
 </review_display_format>
 
 <instructions>
-  ACTION: Extract review output from unified state
+  ACTION: Extract review output and insights from unified state
   FORMAT: Quality scores and category breakdowns for user
   DISPLAY: Strengths, improvements, and recommendations clearly
+  HIGHLIGHT: Questions requiring user input with high visibility
+  SHOW: Process, technical, and efficiency recommendations
+  PRESENT: Learnings and patterns identified
   PROVIDE: Helpful note about using refine-spec for improvements
 </instructions>
 
