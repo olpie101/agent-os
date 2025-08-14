@@ -3,10 +3,15 @@
 These are the tasks to be completed for the spec detailed in @.agent-os/specs/2025-08-05-peer-agents-declarative-transformation/spec.md
 
 > Created: 2025-08-05
-> Updated: 2025-08-06
+> Updated: 2025-08-08
 > Status: Implementation In Progress (Simplified v1)
 > Approach: Simplified first iteration without optimistic locking
 > Reference: @.agent-os/specs/2025-08-05-peer-agents-declarative-transformation/implementation/peer-md-alignment-requirements.md
+> 
+> **IMPORTANT:** File pattern inconsistency identified in task 15.4.7. While file injection pattern was implemented,
+> there's a mismatch in file naming conventions. See sub-specs/file-pattern-consistency.md for details.
+> Task 15.4.7.5 attempted to fix this but introduced incorrect CYCLE_NUMBER extraction.
+> Task 15.4.7.7 provides the correct fix.
 
 ## Phase 1: Critical Prerequisite - Key Delimiter Correction
 
@@ -318,3 +323,189 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
   - [ ] 13.13 Document performance characteristics of v1
   - [ ] 13.14 Create state inspection utilities/examples
   - [ ] 13.15 Final review and sign-off on v1 implementation
+
+## Phase 14: Hybrid Wrapper Script Enhancement for peer-express
+
+- [x] 14. Implement Hybrid File Injection Support for peer-express
+  - [x] 14.1 Enhance update-state.sh with --json-file support
+    - [x] 14.1.1 Maintain backward compatibility with legacy mode (positional args only)
+    - [x] 14.1.2 Add --json-file flag for loading JSON from files via --slurpfile
+    - [x] 14.1.3 Validate file existence before attempting to load
+    - [x] 14.1.4 Validate JSON syntax in files before injection
+    - [x] 14.1.5 Validate variable names follow jq naming rules
+    - [x] 14.1.6 Parse multiple --json-file arguments correctly
+  - [x] 14.2 Update peer-express.md to use hybrid approach
+    - [x] 14.2.1 Keep JQ filter as primary transformation logic
+    - [x] 14.2.2 Use --json-file for complex JSON injection
+    - [x] 14.2.3 Create temporary files in /tmp/peer-express/ directory
+    - [x] 14.2.4 Add JSON validation before state update
+    - [x] 14.2.5 Use $var[0] syntax for --slurpfile array access
+    - [x] 14.2.6 Ensure all output arrays preserve full content (no truncation)
+    - [x] 14.2.7 Store structured data only (no pre-formatted markdown in state)
+  - [x] 14.3 Test hybrid wrapper functionality
+    - [x] 14.3.1 Test legacy mode with direct KV test entries
+    - [x] 14.3.2 Test --json-file with valid JSON files
+    - [x] 14.3.3 Test --json-file with missing files (error handling)
+    - [x] 14.3.4 Test --json-file with malformed JSON (validation)
+    - [x] 14.3.5 Test invalid variable names (validation)
+    - [x] 14.3.6 Test multiple --json-file arguments in one command
+    - [x] 14.3.7 Verify no truncation occurs in output arrays
+  - [x] 14.4 Document hybrid approach usage
+    - [x] 14.4.1 Update nats-kv-operations.md with --json-file syntax
+    - [x] 14.4.2 Add examples showing hybrid approach for complex JSON
+    - [x] 14.4.3 Document that --slurpfile creates arrays (use $var[0])
+    - [x] 14.4.4 Document temporary file location standard (/tmp/peer-express/)
+    - [x] 14.4.5 Note that legacy mode remains default for simple updates
+  - [x] 14.5 Standardize JSON creation to prevent --rawfile usage
+    - [x] 14.5.1 Update json-creation-standards.md to clarify it applies when creating JSON
+    - [x] 14.5.2 Specify jq with --arg as the ONLY approved method
+    - [x] 14.5.3 Explicitly prohibit --rawfile in the standard
+    - [x] 14.5.4 Add multi-line content handling pattern (file to variable to --arg)
+    - [x] 14.5.5 Move implementation details to json-implementation-guide.md subspec
+    - [x] 14.5.6 Add express agent specific requirements to implementation guide
+    - [x] 14.5.7 Clarify Write tool usage as agent action (not bash command)
+    - [x] 14.5.8 Reorder operations to show Write tool first, then bash script
+    - [x] 14.5.9 Update all multi-line examples to use Write tool pattern
+    - [x] 14.5.10 Add critical note that standard must provide multi-line examples
+    - [x] 14.5.11 Update json-creation-standards.md to add complete multi-line examples
+    - [x] 14.5.12 Show Write tool usage as agent action (outside bash context)
+    - [x] 14.5.13 Add bash script example that reads file created by Write tool
+    - [x] 14.5.14 Include express agent specific example with formatted markdown output
+
+## Phase 15: Refine-Spec Agent Customization Integration
+
+- [ ] 15. Add refine-spec customizations to all PEER agents
+  - [x] 15.1 Update peer-planner.md with refine-spec customization
+    - [x] 15.1.1 Add refine-spec planning customization after line 261
+    - [x] 15.1.2 Include existing spec analysis phase
+    - [x] 15.1.3 Add review recommendations integration
+    - [x] 15.1.4 Plan documentation update steps
+    - [x] 15.1.5 Include task status preservation planning
+  - [x] 15.2 Update peer-executor.md with refine-spec delegation
+    - [x] 15.2.1 Add refine-spec delegation context after line 329
+    - [x] 15.2.2 Pass spec name parameter correctly
+    - [x] 15.2.3 Include review recommendations if available
+    - [x] 15.2.4 Add task preservation reminder
+    - [x] 15.2.5 Reference refine-spec.md instruction guidelines
+  - [x] 15.3 Update peer-express.md with refine-spec formatting
+    - [x] 15.3.1 Add refine-spec next steps after line 206
+    - [x] 15.3.2 Add refine-spec presentation template after line 263
+    - [x] 15.3.3 Show spec name and files updated
+    - [x] 15.3.4 List key changes and refinements applied
+    - [x] 15.3.5 Display task status preservation metrics
+  - [x] 15.4 Update peer-review.md with refine-spec criteria
+    - [x] 15.4.1 Add refine-spec review focus after line 205
+    - [x] 15.4.2 Check if changes address original requirements
+    - [x] 15.4.3 Verify documentation consistency maintained
+    - [x] 15.4.4 Validate task status properly preserved
+    - [x] 15.4.5 Assess technical feasibility and clarity improvements
+    - [x] 15.4.6 Correct pattern to match existing JSON structure format (SET review_focus)
+  - [x] 15.4.7 Fix all peer agents to use file injection pattern for complex JSON (PARTIAL - needs consistency fix)
+    - [x] 15.4.7.1 Fix peer-planner.md Step 6 (line 277) to use file injection
+      - [x] 15.4.7.1.1 Add CREATE_DIR /tmp/peer-planner in planning_output_creation section
+      - [x] 15.4.7.1.2 Replace direct --argjson with WRITE_TOOL file creation
+      - [x] 15.4.7.1.3 Update JQ_FILTER to use $plan_out[0] (array access)
+      - [x] 15.4.7.1.4 Use --json-file "plan_out=${PLAN_FILE}" with wrapper
+      - [x] 15.4.7.1.5 Add cleanup: rm -f "${PLAN_FILE}"
+    - [x] 15.4.7.2 Fix peer-review.md Steps 8-9 (lines 384-510) for file injection
+      - [x] 15.4.7.2.1 Add write_review_files section at end of Step 8
+      - [x] 15.4.7.2.2 Add CREATE_DIR /tmp/peer-review in Step 8
+      - [x] 15.4.7.2.3 Write review_output and insights to files in Step 8
+      - [x] 15.4.7.2.4 Modify Step 9 JQ_FILTER to use $review_out[0] and $insights_data[0]
+      - [x] 15.4.7.2.5 Update Step 9 to use --json-file with both files
+      - [x] 15.4.7.2.6 Add cleanup for both files in Step 9
+    - [x] 15.4.7.3 Fix peer-executor.md Steps 7-8 (lines 366-436) for file injection
+      - [x] 15.4.7.3.1 Add write_execution_files section at end of Step 7
+      - [x] 15.4.7.3.2 Add CREATE_DIR /tmp/peer-executor in Step 7
+      - [x] 15.4.7.3.3 Write execution_output to file in Step 7
+      - [x] 15.4.7.3.4 Modify Step 8 JQ_FILTER to use $exec_output[0]
+      - [x] 15.4.7.3.5 Update Step 8 to use --json-file "exec_output=${EXEC_FILE}"
+      - [x] 15.4.7.3.6 Add cleanup: rm -f "${EXEC_FILE}" in Step 8
+    - [x] 15.4.7.4 Verify peer-express.md pattern is reference implementation
+      - [x] 15.4.7.4.1 Confirm Steps 6-7 (lines 339-444) remain unchanged
+      - [x] 15.4.7.4.2 Document as correct reference pattern
+    - [x] 15.4.7.5 Fix file pattern consistency across all agents (INCORRECT IMPLEMENTATION)
+      - [x] 15.4.7.5.1 Update peer-planner.md to use ./tmp/peer-planner/plan_output_cycle_[CYCLE_NUMBER].json
+      - [x] 15.4.7.5.2 Update peer-executor.md to use ./tmp/peer-executor/execution_output_cycle_[CYCLE_NUMBER].json
+      - [x] 15.4.7.5.3 Update peer-review.md to use cycle numbers in both output files
+      - [x] 15.4.7.5.4 Ensure all agents use relative ./tmp/ paths (not absolute /tmp/)
+      - [x] 15.4.7.5.5 Verify CYCLE_NUMBER is available in all agent contexts
+      - [x] 15.4.7.5.6 Update cleanup commands to reference cycle-specific files
+      - [ ] 15.4.7.5.7 Test concurrent cycles don't have file conflicts
+    - [ ] 15.4.7.6 Test all agents handle complex JSON without escaping
+      - [ ] 15.4.7.6.1 Test peer-planner with complex planning output
+      - [ ] 15.4.7.6.2 Test peer-review with complex review scores and insights
+      - [ ] 15.4.7.6.3 Test peer-executor with complex execution results
+      - [ ] 15.4.7.6.4 Verify no direct NATS commands or --argjson used
+    - [x] 15.4.7.7 Correct CYCLE_NUMBER usage to match peer-express.md pattern
+      - [x] 15.4.7.7.1 Remove explicit CYCLE_NUMBER extraction from peer-planner.md Step 6
+      - [x] 15.4.7.7.2 Remove explicit CYCLE_NUMBER extraction from peer-executor.md Steps 7 and 8
+      - [x] 15.4.7.7.3 Remove explicit CYCLE_NUMBER extraction from peer-review.md Steps 8 and 9
+      - [x] 15.4.7.7.4 Use [CYCLE_NUMBER] as placeholder in WRITE_TOOL commands
+      - [x] 15.4.7.7.5 Use ${CYCLE_NUMBER} or [CYCLE_NUMBER] in bash file path variables
+      - [x] 15.4.7.7.6 Verify CYCLE_NUMBER is provided by peer.md context
+      - [ ] 15.4.7.7.7 Test that placeholders are properly substituted at runtime
+  - [ ] 15.5 Test refine-spec integration
+    - [ ] 15.5.1 Test refine-spec with previous review recommendations
+    - [ ] 15.5.2 Test refine-spec without previous recommendations
+    - [ ] 15.5.3 Verify task status preservation works correctly
+    - [ ] 15.5.4 Validate output formatting is appropriate
+    - [ ] 15.5.5 Confirm review quality assessment functions properly
+  - [ ] 15.6 Document integration completion
+    - [ ] 15.6.1 Update implementation notes with refine-spec integration
+    - [ ] 15.6.2 Add to progress-summary.md
+    - [ ] 15.6.3 Verify all peer agents handle refine-spec consistently
+    - [ ] 15.6.4 Document any edge cases discovered during testing
+    - [ ] 15.6.5 Create example PEER cycle with refine-spec usage
+
+## Phase 16: Architectural Corrections (No Backwards Compatibility Concerns)
+
+- [x] 16. Fix Express Phase Ownership Violation
+  - [x] 16.1 Remove root-level result field from peer-express.md
+    - [x] 16.1.1 Remove `.result = $cycle_result[0]` from Step 8 JQ_FILTER (line 439)
+    - [x] 16.1.2 Verify all cycle result data remains in `phases.express.output`
+    - [ ] 16.1.3 Test Express phase only modifies `phases.express.*`
+  - [x] 16.2 Update unified_state_schema.md to remove result field
+    - [x] 16.2.1 Remove result field definition from schema
+    - [x] 16.2.2 Add cycle_summary field owned by Review phase
+    - [x] 16.2.3 Document cycle_summary structure (success, instruction, summary, highlights, completion, next_action)
+    - [x] 16.2.4 Update schema version to 1.1
+  - [x] 16.3 Add cycle_summary creation to peer-review.md
+    - [x] 16.3.1 Create cycle_summary from all phase outputs in Step 8
+    - [x] 16.3.2 Include success status, instruction name, and summary
+    - [x] 16.3.3 Extract highlights from execution and express phases
+    - [x] 16.3.4 Calculate completion percentage
+    - [x] 16.3.5 Determine next_action based on review assessment
+  - [x] 16.4 Update peer.md to display cycle_summary
+    - [x] 16.4.1 Modify Step 11 to read cycle_summary from state
+    - [x] 16.4.2 Display cycle_summary in final summary output
+    - [x] 16.4.3 Remove any references to root.result field
+
+## Phase 17: Fix Hidden Insights Problem
+
+- [x] 17. Fix Hidden Insights Problem
+  - [x] 17.1 Update peer.md Step 12 to display insights
+    - [x] 17.1.1 Extract insights field from unified state
+    - [x] 17.1.2 Add "Questions Requiring Your Input" section with HIGH VISIBILITY
+    - [x] 17.1.3 Display questions_for_user prominently
+    - [x] 17.1.4 Add "Recommendations & Insights" section
+    - [x] 17.1.5 Format process, technical, and efficiency recommendations
+    - [x] 17.1.6 Display learnings and patterns identified
+  - [x] 17.2 Enhance insights structure in peer-review.md
+    - [x] 17.2.1 Ensure questions_for_user are clear and actionable
+    - [x] 17.2.2 Include alternative solution approaches when applicable
+    - [x] 17.2.3 Add rationale for recommended approaches
+    - [x] 17.2.4 Format insights for maximum user value
+
+## Phase 18: Validate Architectural Corrections
+
+- [ ] 18. Validate Architectural Corrections
+  - [ ] 18.1 Test complete PEER cycle with corrections
+    - [ ] 18.1.1 Verify Express phase respects ownership boundaries
+    - [ ] 18.1.2 Confirm cycle_summary properly created by Review
+    - [ ] 18.1.3 Validate insights displayed to user
+    - [ ] 18.1.4 Check questions_for_user are prominently shown
+  - [ ] 18.2 Update documentation
+    - [ ] 18.2.1 Document phase ownership rules clearly
+    - [ ] 18.2.2 Update examples to show correct patterns
+    - [ ] 18.2.3 Add notes about displaying alternative solutions

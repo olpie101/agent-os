@@ -50,12 +50,25 @@ When multiple phases need to update cycle state, the system should use sequence-
 
 This spec follows a simplified v1 approach as detailed in the alignment requirements document. The v1 implementation removes all optimistic locking complexity and focuses on proving the unified state concept with simple read/write operations.
 
+### Backwards Compatibility Note
+
+Backwards compatibility with existing cycles is NOT a concern for this implementation. This allows for clean architectural corrections without migration complexity.
+
 ### Critical Bug Fix (Phase 8.5)
 
 During testing, a critical issue was discovered where `create-spec` instructions would incorrectly use `peer.global` as the key prefix instead of `peer.spec.[SPEC_NAME]`. This occurs because spec name determination happened after KEY_PREFIX was already set. The fix involves moving spec name determination logic into Step 4 of peer.md, before KEY_PREFIX is finalized.
+
+### Architectural Corrections (Phase 15.5)
+
+Two critical architectural issues have been identified that require correction:
+1. **Express Phase Violation**: The Express phase adds a `result` field at the root level, violating phase ownership principles
+2. **Hidden Insights**: The Review phase generates valuable insights that are never displayed to users
 
 ## Spec Documentation
 
 - Tasks: @.agent-os/specs/2025-08-05-peer-agents-declarative-transformation/tasks.md
 - Technical Specification: @.agent-os/specs/2025-08-05-peer-agents-declarative-transformation/sub-specs/technical-spec.md
 - Alignment Requirements: @.agent-os/specs/2025-08-05-peer-agents-declarative-transformation/implementation/peer-md-alignment-requirements.md
+- Wrapper Script Enhancement: @.agent-os/specs/2025-08-05-peer-agents-declarative-transformation/sub-specs/wrapper-script-enhancement.md
+- Refine-Spec Integration: @.agent-os/specs/2025-08-05-peer-agents-declarative-transformation/sub-specs/refine-spec-integration.md
+- Architectural Corrections: @.agent-os/specs/2025-08-05-peer-agents-declarative-transformation/sub-specs/architectural-corrections.md
