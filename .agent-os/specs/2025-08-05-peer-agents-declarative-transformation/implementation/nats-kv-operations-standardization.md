@@ -1,109 +1,303 @@
-# NATS KV Operations Standardization
+# NATS KV Operations Declarative Patterns
 
 > Created: 2025-08-06
-> Purpose: Address critical NATS KV operation inconsistencies causing data corruption
+> Purpose: XML declarative patterns for PEER agent NATS KV operations
+> Status: XML Declarative Approach
 
-## Issue Analysis
+## Problem Analysis
 
-### Problem Description
+### Issue Description
 
-During testing of the create-spec PEER cycle, the peer-review agent and final cycle completion steps corrupted the NATS KV state, resulting in complete data loss. Analysis of `peer.spec.walcommitter-operation-support.cycle.1` reveals:
-
-- **Last valid revision:** 6 (10,685 bytes of valid JSON)
-- **First corruption:** Revision 7 (10,819 bytes of malformed JSON)
-- **Complete data loss:** Revisions 8-9 (0 bytes)
+PEER agents require consistent NATS KV operations but script-based approaches create brittleness and maintenance overhead. The solution is declarative XML patterns that define NATS operations requirements.
 
 ### Root Cause Analysis
 
-1. **Inconsistent NATS Operations Across Agents**: Each agent uses different approaches for reading/writing NATS KV data
-2. **No Standardized JSON Handling**: Different agents use different methods to manipulate JSON
-3. **Missing JSON Validation**: No validation before writing corrupted JSON to NATS
-4. **Lack of Error Handling**: No detection when NATS operations fail or corrupt data
+1. **Inconsistent Operation Patterns**: Different agents use different approaches for NATS data access
+2. **Script Dependencies**: Script-based solutions are brittle and hard to maintain
+3. **Missing Validation Patterns**: No standardized validation before data operations
+4. **Error Handling Complexity**: Different error handling approaches across agents
 
-### Observed Issues
+### Observed Requirements
 
-From the NATS KV history:
-- Revision 6: Valid complete JSON structure (express phase completed)
-- Revision 7: Malformed JSON with missing closing brackets (peer-review attempt)
-- Revision 8-9: Empty keys (final completion attempts failed)
+From PEER pattern operation analysis:
+- Need consistent state reading patterns across all agents
+- Require reliable state update patterns with validation
+- Must have clear error handling and recovery patterns
+- Should preserve data integrity through structured operations
 
-## Standardized Solution for v1 (Script-Based)
+## Declarative NATS Operation Patterns
 
-### Core Requirements for v1
+### State Reading Pattern
 
-1. **Wrapper Scripts**: All PEER agents and automated processes must use scripts, never call NATS CLI directly
-2. **JSON Validation Mandatory**: All JSON must be validated before writing to NATS
-3. **Error Propagation**: All errors must be printed and propagated to agents
-4. **JSON Logging**: The JSON being written must be logged for debugging
-5. **Use `nats kv update`**: For modifications, use update with revision number
-6. **Manual Recovery Exception**: Human operators may use NATS CLI directly for recovery operations only
-
-## Wrapper Scripts
-
-### Installation Path
-
-The wrapper scripts must be installed to `~/.agent-os/scripts/peer/` by the setup.sh script during Agent OS installation. All PEER agents must reference scripts at this installed location, NOT local project paths.
-
-### 1. read-state.sh
-
-Script for reading state from NATS KV:
-
-```bash
-#!/bin/bash
-# read-state.sh - Wrapper for reading NATS KV state
-# Usage: ./read-state.sh <STATE_KEY>
-
-STATE_KEY="$1"
-
-if [ -z "$STATE_KEY" ]; then
-  echo "ERROR: STATE_KEY is required as first argument" >&2
-  exit 1
-fi
-
-# Read current state
-STATE=$(nats kv get agent-os-peer-state "$STATE_KEY" --raw 2>&1)
-READ_EXIT=$?
-
-if [ $READ_EXIT -ne 0 ]; then
-  echo "ERROR: Failed to read state from NATS KV at key: $STATE_KEY" >&2
-  echo "NATS Error: $STATE" >&2
-  exit 1
-fi
-
-# Validate JSON is readable
-echo "$STATE" | jq empty 2>&1 >/dev/null
-if [ $? -ne 0 ]; then
-  echo "ERROR: Invalid JSON in NATS KV state at key: $STATE_KEY" >&2
-  echo "Raw data received (first 500 chars): ${STATE:0:500}" >&2
-  exit 1
-fi
-
-# Output the valid JSON to stdout (for agent to capture)
-echo "$STATE"
+```xml
+<nats_operation name="read_cycle_state">
+  <operation_type>read</operation_type>
+  <target>
+    <bucket>agent-os-peer-state</bucket>
+    <key source="STATE_KEY">Current cycle state key</key>
+  </target>
+  
+  <validation>
+    <require_key_exists>true</require_key_exists>
+    <require_valid_json>true</require_valid_json>
+    <schema_validation>unified_state_schema.md</schema_validation>
+  </validation>
+  
+  <error_handling>
+    <key_not_found>
+      <action>log error with key name</action>
+      <action>exit with descriptive message</action>
+    </key_not_found>
+    <invalid_json>
+      <action>log first 500 characters of data</action>
+      <action>report JSON validation error</action>
+      <action>exit with recovery suggestions</action>
+    </invalid_json>
+    <nats_connection_error>
+      <action>report NATS server connectivity issue</action>
+      <action>suggest server status check</action>
+      <action>exit with connection details</action>
+    </nats_connection_error>
+  </error_handling>
+  
+  <output_format>valid_json_to_stdout</output_format>
+</nats_operation>
 ```
 
-### 2. update-state.sh
+### State Update Pattern
 
-Script for updating state in NATS KV:
+```xml
+<nats_operation name="update_cycle_state">
+  <operation_type>update</operation_type>
+  <target>
+    <bucket>agent-os-peer-state</bucket>
+    <key source="STATE_KEY">Current cycle state key</key>
+  </target>
+  
+  <transformation>
+    <method>jq_filter</method>
+    <filter source="JQ_FILTER">JSON transformation to apply</filter>
+    <additional_data source="file_injection">Optional data injection from files</additional_data>
+  </transformation>
+  
+  <validation>
+    <pre_update>
+      <rule>current state must be valid JSON</rule>
+      <rule>transformation filter must be valid</rule>
+      <rule>injected data must be valid JSON</rule>
+    </pre_update>
+    <post_update>
+      <rule>result must be valid JSON</rule>
+      <rule>result must match schema requirements</rule>
+      <rule>required fields must be preserved</rule>
+    </post_update>
+  </validation>
+  
+  <conflict_resolution>
+    <use_revision_checking>true</use_revision_checking>
+    <retry_on_conflict>3_attempts_max</retry_on_conflict>
+    <exponential_backoff>100ms_initial</exponential_backoff>
+  </conflict_resolution>
+  
+  <error_handling>
+    <transformation_error>
+      <action>log JQ filter and input data</action>
+      <action>report specific transformation failure</action>
+      <action>preserve original state</action>
+    </transformation_error>
+    <validation_failure>
+      <action>log validation error details</action>
+      <action>preserve failed JSON for debugging</action>
+      <action>exit without updating NATS</action>
+    </validation_failure>
+    <update_conflict>
+      <action>log current and expected revisions</action>
+      <action>retry with fresh state read</action>
+      <action>fail after max retries</action>
+    </update_conflict>
+  </error_handling>
+</nats_operation>
+```
 
-```bash
-#!/bin/bash
-# update-state.sh - Wrapper for updating NATS KV state
-# Usage: ./update-state.sh <STATE_KEY> <JQ_FILTER>
-# The JQ filter receives the current state and should output the modified state
+### File Injection Pattern
 
-STATE_KEY="$1"
-JQ_FILTER="$2"
+```xml
+<file_injection_operation name="multi_source_state_update">
+  <operation_type>update_with_injection</operation_type>
+  <target>
+    <bucket>agent-os-peer-state</bucket>
+    <key source="STATE_KEY">Target state key</key>
+  </target>
+  
+  <data_sources>
+    <file_source variable="expr_out" path="/tmp/express_output.json">
+      <validation>verify_json_syntax</validation>
+      <access_pattern>slurp_as_array</access_pattern>
+      <reference_format>$expr_out[0]</reference_format>
+    </file_source>
+    <file_source variable="cycle_res" path="/tmp/cycle_result.json">
+      <validation>verify_json_syntax</validation>
+      <access_pattern>slurp_as_array</access_pattern>
+      <reference_format>$cycle_res[0]</reference_format>
+    </file_source>
+  </data_sources>
+  
+  <transformation>
+    <filter source="JQ_FILTER_WITH_VARIABLES">
+      JQ filter that references injected variables
+    </filter>
+  </transformation>
+  
+  <file_validation>
+    <pre_injection>
+      <rule>all files must exist</rule>
+      <rule>all files must be readable</rule>
+      <rule>all files must contain valid JSON</rule>
+      <rule>variable names must be valid identifiers</rule>
+    </pre_injection>
+  </file_validation>
+  
+  <cleanup>
+    <temporary_files>remove_after_successful_update</temporary_files>
+    <on_error>preserve_files_for_debugging</on_error>
+  </cleanup>
+</file_injection_operation>
+```
 
-if [ -z "$STATE_KEY" ] || [ -z "$JQ_FILTER" ]; then
-  echo "ERROR: STATE_KEY and JQ_FILTER are required" >&2
-  echo "Usage: ./update-state.sh <STATE_KEY> <JQ_FILTER>" >&2
-  exit 1
-fi
+## Agent Implementation Requirements
 
-# Step 1: Read current state
-STATE=$(nats kv get agent-os-peer-state "$STATE_KEY" --raw 2>&1)
-READ_EXIT=$?
+### PEER Agent Responsibilities
+
+```xml
+<nats_operation_requirements>
+  <reading_specifications>
+    <requirement>parse XML NATS operation patterns</requirement>
+    <requirement>identify operation type and parameters</requirement>
+    <requirement>understand validation requirements</requirement>
+    <requirement>extract error handling rules</requirement>
+  </reading_specifications>
+  
+  <operation_execution>
+    <requirement>use wrapper scripts for all NATS operations</requirement>
+    <requirement>validate data before and after operations</requirement>
+    <requirement>handle errors according to declared patterns</requirement>
+    <requirement>log operations for debugging purposes</requirement>
+  </operation_execution>
+  
+  <data_integrity>
+    <requirement>ensure JSON validity before NATS updates</requirement>
+    <requirement>preserve existing data during transformations</requirement>
+    <requirement>validate schema compliance</requirement>
+    <requirement>handle concurrent access appropriately</requirement>
+  </data_integrity>
+</nats_operation_requirements>
+```
+
+### Wrapper Script Usage Pattern
+
+```xml
+<wrapper_script_integration>
+  <script_location>~/.agent-os/scripts/peer/</script_location>
+  <usage_pattern>
+    <read_operation>
+      <script>read-state.sh</script>
+      <parameters>
+        <parameter name="STATE_KEY" source="cycle_context">NATS KV key to read</parameter>
+      </parameters>
+      <output>valid JSON to stdout</output>
+      <error_handling>exit codes and stderr messages</error_handling>
+    </read_operation>
+    
+    <update_operation>
+      <script>update-state.sh</script>
+      <parameters>
+        <parameter name="STATE_KEY" source="cycle_context">NATS KV key to update</parameter>
+        <parameter name="JQ_FILTER" source="transformation_spec">JSON transformation filter</parameter>
+        <parameter name="file_injections" optional="true">Additional data files</parameter>
+      </parameters>
+      <output>success confirmation or error details</output>
+      <error_handling>preserve state on failure</error_handling>
+    </update_operation>
+  </usage_pattern>
+</wrapper_script_integration>
+```
+
+### Error Recovery Patterns
+
+```xml
+<error_recovery_strategies>
+  <nats_connectivity>
+    <detection_pattern>connection timeout or authentication failure</detection_pattern>
+    <recovery_actions>
+      <action>verify NATS server status</action>
+      <action>check network connectivity</action>
+      <action>validate credentials if applicable</action>
+      <action>suggest manual NATS server restart</action>
+    </recovery_actions>
+  </nats_connectivity>
+  
+  <data_corruption>
+    <detection_pattern>invalid JSON in NATS KV</detection_pattern>
+    <recovery_actions>
+      <action>log corrupted data for analysis</action>
+      <action>prevent further corruption</action>
+      <action>suggest manual recovery from backup</action>
+      <action>document corruption circumstances</action>
+    </recovery_actions>
+  </data_corruption>
+  
+  <concurrent_updates>
+    <detection_pattern>revision mismatch during update</detection_pattern>
+    <recovery_actions>
+      <action>re-read current state</action>
+      <action>re-apply transformation</action>
+      <action>retry update with new revision</action>
+      <action>fail after maximum retries</action>
+    </recovery_actions>
+  </concurrent_updates>
+</error_recovery_strategies>
+```
+
+## Implementation Guidelines
+
+### Installation Requirements
+
+```xml
+<installation_pattern>
+  <script_deployment>
+    <source>Agent OS setup process</source>
+    <destination>~/.agent-os/scripts/peer/</destination>
+    <permissions>executable by user</permissions>
+    <validation>verify scripts work with local NATS</validation>
+  </script_deployment>
+  
+  <agent_configuration>
+    <requirement>agents reference installed script location</requirement>
+    <requirement>no local script copies or modifications</requirement>
+    <requirement>consistent script usage across all agents</requirement>
+  </agent_configuration>
+</installation_pattern>
+```
+
+### Validation Standards
+
+```xml
+<validation_standards>
+  <json_requirements>
+    <rule>all JSON must parse without errors</rule>
+    <rule>JSON must conform to unified state schema</rule>
+    <rule>required fields must be present</rule>
+    <rule>data types must match specifications</rule>
+  </json_requirements>
+  
+  <operation_requirements>
+    <rule>validate inputs before NATS operations</rule>
+    <rule>validate outputs after transformations</rule>
+    <rule>preserve data integrity during updates</rule>
+    <rule>handle errors gracefully with clear messages</rule>
+  </operation_requirements>
+</validation_standards>
+```
 
 if [ $READ_EXIT -ne 0 ]; then
   echo "ERROR: Failed to read state from NATS KV" >&2
@@ -437,12 +631,52 @@ PEER agents and automated processes:
 - **CANNOT** perform recovery operations
 - **CANNOT** call NATS CLI directly under any circumstances
 
-## Migration Steps
+## Key Principles
 
-1. Update setup.sh to install wrapper scripts to `~/.agent-os/scripts/peer/`
-2. Update all PEER agents to use wrapper scripts from installed location
-3. Remove all direct NATS CLI calls from agents
-4. Test complete cycle with installed scripts
-5. Document in meta instruction file
+### Declarative Operations Focus
 
-This approach ensures consistency, safety, and debuggability while preventing the data corruption issues we encountered, while still allowing human operators the flexibility needed for emergency recovery.
+```xml
+<operational_principles>
+  <consistency>
+    <principle>all agents use identical NATS operation patterns</principle>
+    <principle>wrapper scripts provide uniform interface</principle>
+    <principle>error handling follows consistent patterns</principle>
+  </consistency>
+  
+  <reliability>
+    <principle>validation occurs before all operations</principle>
+    <principle>data integrity preserved through structured approaches</principle>
+    <principle>clear error messages enable effective debugging</principle>
+  </reliability>
+  
+  <maintainability>
+    <principle>XML patterns easier to understand than script logic</principle>
+    <principle>declarative specifications reduce implementation brittleness</principle>
+    <principle>centralized wrapper scripts minimize duplication</principle>
+  </maintainability>
+</operational_principles>
+```
+
+### Migration Success Criteria
+
+```xml
+<migration_outcomes>
+  <functionality>
+    <outcome>all PEER agents perform NATS operations consistently</outcome>
+    <outcome>data integrity maintained through validation patterns</outcome>
+    <outcome>error handling provides clear debugging information</outcome>
+  </functionality>
+  
+  <reliability>
+    <outcome>reduced script dependencies in agent implementations</outcome>
+    <outcome>consistent operation patterns across all PEER phases</outcome>
+    <outcome>improved error recovery through structured approaches</outcome>
+  </reliability>
+  
+  <maintainability>
+    <outcome>XML specifications easier to modify than script code</outcome>
+    <outcome>declarative patterns reduce maintenance overhead</outcome>
+    <outcome>centralized wrapper scripts simplify updates</outcome>
+  </maintainability>
+</migration_outcomes>
+```
