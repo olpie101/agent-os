@@ -1,14 +1,66 @@
 #!/bin/bash
 # update-state.sh - Wrapper for updating NATS KV state
-# Usage: ./update-state.sh <STATE_KEY> <JQ_FILTER>
+# Usage: ./update-state.sh <STATE_KEY> <JQ_FILTER> [--json-file <VAR_NAME>=<FILE_PATH> ...]
 # The JQ filter receives the current state and should output the modified state
+# Optional --json-file flags load JSON from files for use in JQ filter as $VAR_NAME[0]
 
-STATE_KEY="$1"
-JQ_FILTER="$2"
+# Initialize variables
+STATE_KEY=""
+JQ_FILTER=""
+JSON_FILES=()
+
+# Parse arguments - maintain backward compatibility with positional args
+if [[ ! "$1" =~ ^-- ]]; then
+  # Legacy mode: positional arguments only
+  STATE_KEY="$1"
+  JQ_FILTER="$2"
+  shift 2
+else
+  # New mode: parse flags
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --state-key)
+        STATE_KEY="$2"
+        shift 2
+        ;;
+      --filter)
+        JQ_FILTER="$2"
+        shift 2
+        ;;
+      --json-file)
+        JSON_FILES+=("$2")
+        shift 2
+        ;;
+      *)
+        # Assume legacy positional mode if unknown flag
+        if [ -z "$STATE_KEY" ]; then
+          STATE_KEY="$1"
+        elif [ -z "$JQ_FILTER" ]; then
+          JQ_FILTER="$1"
+        fi
+        shift
+        ;;
+    esac
+  done
+fi
+
+# Parse remaining arguments for --json-file flags (legacy mode)
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --json-file)
+      JSON_FILES+=("$2")
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
 
 if [ -z "$STATE_KEY" ] || [ -z "$JQ_FILTER" ]; then
   echo "ERROR: STATE_KEY and JQ_FILTER are required" >&2
-  echo "Usage: ./update-state.sh <STATE_KEY> <JQ_FILTER>" >&2
+  echo "Usage: ./update-state.sh <STATE_KEY> <JQ_FILTER> [--json-file <VAR_NAME>=<FILE_PATH> ...]" >&2
+  echo "  or: ./update-state.sh --state-key <KEY> --filter <FILTER> [--json-file <VAR_NAME>=<FILE_PATH> ...]" >&2
   exit 1
 fi
 
@@ -36,15 +88,55 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# Step 3.5: Validate and prepare --json-file arguments
+JQ_SLURPFILE_ARGS=()
+for json_file_spec in "${JSON_FILES[@]}"; do
+  # Parse VAR_NAME=FILE_PATH format
+  if [[ ! "$json_file_spec" =~ ^([a-zA-Z_][a-zA-Z0-9_]*)=(.+)$ ]]; then
+    echo "ERROR: Invalid --json-file format: $json_file_spec" >&2
+    echo "Expected: VAR_NAME=FILE_PATH where VAR_NAME follows jq variable naming rules" >&2
+    exit 1
+  fi
+  
+  VAR_NAME="${BASH_REMATCH[1]}"
+  FILE_PATH="${BASH_REMATCH[2]}"
+  
+  # Validate file exists
+  if [ ! -f "$FILE_PATH" ]; then
+    echo "ERROR: JSON file not found: $FILE_PATH" >&2
+    exit 1
+  fi
+  
+  # Validate JSON syntax
+  jq empty "$FILE_PATH" 2>&1 >/dev/null
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Invalid JSON in file: $FILE_PATH" >&2
+    exit 1
+  fi
+  
+  # Add to slurpfile arguments
+  JQ_SLURPFILE_ARGS+=(--slurpfile "$VAR_NAME" "$FILE_PATH")
+done
+
 # Step 4: Apply JQ filter (capture both output and errors)
 JQ_ERROR=$(mktemp)
-MODIFIED_STATE=$(echo "$STATE" | jq "$JQ_FILTER" 2>"$JQ_ERROR")
-JQ_EXIT=$?
+if [ ${#JQ_SLURPFILE_ARGS[@]} -gt 0 ]; then
+  # Use slurpfile for loading JSON from files
+  MODIFIED_STATE=$(echo "$STATE" | jq "${JQ_SLURPFILE_ARGS[@]}" "$JQ_FILTER" 2>"$JQ_ERROR")
+  JQ_EXIT=$?
+else
+  # Legacy mode without slurpfile
+  MODIFIED_STATE=$(echo "$STATE" | jq "$JQ_FILTER" 2>"$JQ_ERROR")
+  JQ_EXIT=$?
+fi
 
 if [ $JQ_EXIT -ne 0 ]; then
   echo "ERROR: Failed to modify JSON with jq (exit code: $JQ_EXIT)" >&2
   echo "JQ Error: $(cat "$JQ_ERROR")" >&2
   echo "JQ Filter was: $JQ_FILTER" >&2
+  if [ ${#JSON_FILES[@]} -gt 0 ]; then
+    echo "JSON Files provided: ${JSON_FILES[*]}" >&2
+  fi
   rm -f "$JQ_ERROR"
   exit 1
 fi
