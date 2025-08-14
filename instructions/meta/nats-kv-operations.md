@@ -84,6 +84,83 @@ PEER agents and automated processes are PROHIBITED from calling NATS CLI directl
   # Update successful
 </update_pattern>
 
+### Hybrid Approach for Complex JSON (--json-file)
+
+For complex JSON objects that are difficult to pass as command arguments, use the --json-file option:
+
+<hybrid_pattern>
+  # Create temporary directory for JSON files
+  TEMP_DIR="/tmp/peer-${AGENT_NAME}"
+  mkdir -p "$TEMP_DIR"
+  
+  # Write complex JSON to temporary files
+  EXPRESS_FILE="${TEMP_DIR}/express_output_$$.json"
+  CYCLE_FILE="${TEMP_DIR}/cycle_result_$$.json"
+  
+  echo "$EXPRESS_OUTPUT_JSON" > "$EXPRESS_FILE"
+  echo "$CYCLE_RESULT_JSON" > "$CYCLE_FILE"
+  
+  # IMPORTANT: --slurpfile creates arrays, so use $var[0] to access the object
+  JQ_FILTER='
+    .phases.express.output = $express[0] |
+    .result = $cycle[0] |
+    .metadata.updated_at = (now | todate)
+  '
+  
+  # Use --json-file for complex JSON injection
+  RESULT=$(~/.agent-os/scripts/peer/update-state.sh "$STATE_KEY" "$JQ_FILTER" \
+    --json-file "express=${EXPRESS_FILE}" \
+    --json-file "cycle=${CYCLE_FILE}")
+  UPDATE_EXIT=$?
+  
+  # Always clean up temporary files
+  rm -f "$EXPRESS_FILE" "$CYCLE_FILE"
+  
+  if [ $UPDATE_EXIT -ne 0 ]; then
+    exit 1
+  fi
+</hybrid_pattern>
+
+#### When to Use --json-file
+
+Use the hybrid approach when:
+- JSON objects contain special characters that are difficult to escape
+- JSON objects are too large for command line arguments
+- Multiple complex JSON objects need to be injected
+- JSON is generated dynamically and might contain unpredictable content
+
+#### Important Notes
+
+1. **Array Access**: The `--slurpfile` mechanism used internally creates arrays, so always use `$varname[0]` to access your JSON object
+2. **Validation**: Always validate JSON before writing to temp files
+3. **Cleanup**: Always remove temporary files after use, even on error
+4. **Variable Names**: Must follow jq variable naming rules (start with letter or underscore)
+5. **Multiple Files**: You can use multiple --json-file arguments in a single command
+
+#### Example with Validation
+
+<validated_hybrid_example>
+  # Validate JSON before writing to temp files
+  echo "$COMPLEX_JSON" | jq empty 2>&1 >/dev/null
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Invalid JSON in COMPLEX_JSON" >&2
+    exit 1
+  fi
+  
+  # Write to temp file
+  TEMP_FILE="/tmp/peer-express/data_$$.json"
+  echo "$COMPLEX_JSON" > "$TEMP_FILE"
+  
+  # Use in filter with array access
+  JQ_FILTER='.phases.express.output = $data[0]'
+  
+  RESULT=$(~/.agent-os/scripts/peer/update-state.sh "$STATE_KEY" "$JQ_FILTER" \
+    --json-file "data=${TEMP_FILE}")
+  
+  # Clean up
+  rm -f "$TEMP_FILE"
+</validated_hybrid_example>
+
 ## Phase Ownership Rules
 
 Each agent MUST only modify its designated phase:
