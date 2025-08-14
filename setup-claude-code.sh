@@ -128,7 +128,7 @@ echo ""
 echo "📥 Downloading Claude Code subagents to ~/.claude/agents/"
 
 # List of agent files to download
-agents=("test-runner" "context-fetcher" "git-workflow" "file-creator" "date-checker" "peer-planner" "peer-executor" "peer-express" "peer-review")
+agents=("test-runner" "context-fetcher" "git-workflow" "file-creator" "date-checker" "peer-planner" "peer-executor" "peer-express" "peer-review" "meta-agent")
 
 for agent in "${agents[@]}"; do
     if [ -f "$HOME/.claude/agents/${agent}.md" ] && [ "$OVERWRITE_AGENTS" = false ]; then

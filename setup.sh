@@ -323,6 +323,18 @@ else
     fi
 fi
 
+# json-creation-standards.md
+if [ -f "$HOME/.agent-os/instructions/meta/json-creation-standards.md" ] && [ "$OVERWRITE_INSTRUCTIONS" = false ]; then
+    echo "    ⚠️  ~/.agent-os/instructions/meta/json-creation-standards.md already exists - skipping"
+else
+    download_file "${BASE_URL}/instructions/meta/json-creation-standards.md" "$HOME/.agent-os/instructions/meta/json-creation-standards.md"
+    if [ -f "$HOME/.agent-os/instructions/meta/json-creation-standards.md" ] && [ "$OVERWRITE_INSTRUCTIONS" = true ]; then
+        echo "    ✓ ~/.agent-os/instructions/meta/json-creation-standards.md (overwritten)"
+    else
+        echo "    ✓ ~/.agent-os/instructions/meta/json-creation-standards.md"
+    fi
+fi
+
 # PEER Pattern Scripts
 echo ""
 echo "📥 Downloading PEER pattern scripts to ~/.agent-os/scripts/peer/"
