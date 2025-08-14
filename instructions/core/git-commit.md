@@ -40,6 +40,10 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
 # Execute a commit plan file
 /peer --instruction=git-commit --plan=commit-plan-2025-08-13-17-30.json
 
+
+# Execute only a specific branch from plan (partial execution)
+/peer --instruction=git-commit --plan=commit-plan-2025-08-13-17-30.json --branch=feature/auth
+
 # Resume incomplete commit execution
 /peer --instruction=git-commit --continue
 ```
@@ -68,11 +72,13 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
         - --skip-precommit: Skip MCP validation even if available
         - --plan=<filename>: Execute commit plan file (optional)
         - --continue: Resume incomplete execution from NATS KV state (optional)
+        - --branch=<branch-name>: Execute only specified branch from plan (optional)
         
       VALIDATE arguments:
         - --plan and --continue are mutually exclusive
         - If --plan provided, file must exist in .agent-os/commit-plan/
-        
+        - If --branch provided, --plan must also be provided
+        - --branch and --continue are mutually exclusive
       STORE parsed values for use in workflow
     </argument_parsing>
     
@@ -115,6 +121,25 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
       </mode_detection>
     </execution_mode_determination>
     
+    <mcp_context_isolation>
+      IF execution through PEER AND MCP validation requested:
+        FOR each commit in plan (if plan_execution mode):
+          ISOLATE MCP context to ONLY files in current commit:
+            - Extract file list from current commit specification
+            - Provide ONLY those files to MCP validation
+            - Do NOT include files from other commits in plan
+            - Do NOT include full project context
+            - PREVENT MCP from seeing entire plan structure
+          VALIDATE each commit independently with isolated context
+        
+        IF standard_commit mode:
+          ISOLATE MCP context to currently staged files only:
+            - Identify files staged for commit
+            - Provide ONLY staged files to MCP validation
+            - Do NOT include unstaged or unrelated files
+      
+      STORE: isolated_context_per_commit for use in execution steps
+    </mcp_context_isolation>
   </step>
   
   <step number="3" name="plan_file_handling" conditional="true">
@@ -129,57 +154,39 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
     
     <plan_file_operations>
       <file_loading>
-        <action>READ plan file from .agent-os/commit-plan/${plan_filename}</action>
-        <validation>
-          - File exists and is readable
-          - Valid JSON structure
-          - Contains required fields per commit-plan-schema.md
-          - Version field equals 1
-        </validation>
-        <error_handling>
-          IF file not found:
-            ERROR: "Commit plan file '${plan_filename}' not found in .agent-os/commit-plan/"
-            PROVIDE: "Available files: [list .agent-os/commit-plan/*.json]"
-            STOP execution
-          IF invalid JSON or missing required fields:
-            ERROR: "Invalid commit plan file structure"
-            REFERENCE: "@~/.agent-os/instructions/meta/commit-plan-schema.md for valid format"
-            STOP execution
-        </error_handling>
+        <action>
+          DELEGATE: plan file validation to commit-plan-validation.md
+          
+          REFERENCE: @~/.agent-os/instructions/meta/commit-plan-validation.md
+          EXECUTE: Complete plan validation workflow:
+            1. File Location and Format Detection workflow
+            2. JSON Plan Validation workflow (if JSON format)
+            3. Markdown Plan Validation workflow (if Markdown format)  
+            4. Cross-Format Validation workflow
+            5. Conversion Validation workflow (if Markdown to JSON conversion needed)
+          
+          CAPTURE: validated plan structure and format information
+          HANDLE: all error conditions through commit-plan-validation.md error patterns
+          RETURN: format-normalized plan data ready for execution
+        </action>
       </file_loading>
       
       <state_initialization>
-        <generate_timestamp>
-          SET current_timestamp = current datetime in format yyyy.mm.dd.hh.mm
-        </generate_timestamp>
-        <create_nats_state>
-          <key_format>peer.commit.${timestamp}</key_format>
-          <initial_state>
-            {
-              "version": 1,
-              "plan_file": "${plan_filename}",
-              "execution_id": "peer.commit.${timestamp}",
-              "status": "initialized",
-              "created_at": "${iso_timestamp}",
-              "updated_at": "${iso_timestamp}",
-              "current_branch": "${current_git_branch}",
-              "original_branch": "${current_git_branch}",
-              "plan": {
-                "expected_branches": ${extract_branches_from_plan},
-                "total_commits": ${count_commits_in_plan},
-                "commits_per_branch": ${group_commits_by_branch}
-              },
-              "progress": {
-                "current_step": 0,
-                "total_steps": ${total_commits},
-                "completed_commits": [],
-                "current_commit_files": [],
-                "remaining_commits": ${total_commits}
-              }
-            }
-          </initial_state>
-          <storage_command>echo "${initial_state}" | nats kv put agent-os-peer-state "peer.commit.${timestamp}"</storage_command>
-        </create_nats_state>
+        <action>
+          DELEGATE: state creation to git-commit-state-management.md
+          
+          REFERENCE: @~/.agent-os/instructions/meta/git-commit-state-management.md
+          EXECUTE: State Creation Workflow:
+            1. Extract Timestamp from Plan Filename workflow
+            2. Initialize State Object workflow
+            3. Store Initial State in NATS KV workflow
+          
+          PROVIDE: validated plan data and execution context
+          INCLUDE: --branch flag information for partial execution support
+          CAPTURE: generated state key for subsequent operations
+          HANDLE: state creation errors through git-error-recovery.md patterns
+          RETURN: execution state key and initial progress context
+        </action>
       </state_initialization>
     </plan_file_operations>
     
@@ -196,53 +203,21 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
     </conditional_execution>
     
     <state_discovery>
-      <find_incomplete_executions>
-        <action>SEARCH NATS KV for keys matching pattern "peer.commit.*"</action>
-        <command>nats kv ls agent-os-peer-state | grep "peer.commit"</command>
-        <filter_criteria>
-          FOR each found key:
-            READ state object from key
-            CHECK status field
-            IF status IN ["initialized", "in_progress", "paused_for_conflict"]:
-              ADD key to resumable_executions list
-        </filter_criteria>
-      </find_incomplete_executions>
-      
-      <user_selection>
-        IF resumable_executions is empty:
-          ERROR: "No incomplete git commit executions found"
-          PROVIDE: "Start a new execution with --plan argument"
-          STOP execution
-        ELSE IF resumable_executions has 1 item:
-          SET selected_execution = resumable_executions[0]
-          NOTIFY: "Resuming execution: ${selected_execution}"
-        ELSE:
-          PROMPT user to select from resumable_executions list
-          DISPLAY each execution with:
-            - Execution ID
-            - Creation timestamp  
-            - Current status
-            - Progress summary
-          WAIT for user selection
-          SET selected_execution = user_choice
-      </user_selection>
-      
-      <state_restoration>
-        <load_state>
-          READ complete state from NATS KV using selected_execution key
-          PARSE state object to restore execution context
-        </load_state>
-        <conflict_handling>
-          IF state.status == "paused_for_conflict":
-            CHECK if stash exists with stash_ref from state
-            IF stash exists:
-              NOTIFY: "Conflict resolution required. Stash available: ${state.conflict_context.stash_ref}"
-              PREPARE for stash restoration
-            ELSE:
-              ERROR: "Stash reference not found. Manual cleanup may be needed."
-              STOP execution
-        </conflict_handling>
-      </state_restoration>
+      <action>
+        DELEGATE: resume state discovery to git-commit-state-management.md
+        
+        REFERENCE: @~/.agent-os/instructions/meta/git-commit-state-management.md
+        EXECUTE: Resume State Discovery workflow:
+          1. Search for Incomplete Executions workflow
+          2. Present Resumable Options workflow  
+          3. Restore Execution Context workflow
+        
+        COORDINATE: with user-interaction-workflows.md for multi-option selection
+        HANDLE: conflict state validation and stash verification
+        CAPTURE: restored execution context and continuation point
+        VALIDATE: execution environment readiness through recovery workflows
+        RETURN: selected execution state and resume preparation status
+      </action>
     </state_discovery>
     
   </step>
@@ -258,73 +233,59 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
     </conditional_execution>
     
     <execution_engine>
-      <branch_dependency_analysis>
-        <analyze_dependencies>
-          FOR each commit in execution plan:
-            IDENTIFY files that overlap between commits
-            CHECK branch dependencies in requires_branches field
-            DETECT potential conflicts
-        </analyze_dependencies>
-        <dependency_resolution>
-          IF file dependencies detected between branches:
-            TRIGGER user decision workflow
-            PRESENT visual decision tree from technical-spec.md
-            OPTIONS: merge_dependency | create_new_branch | skip_file
-            WAIT for user decision
-            EXECUTE chosen strategy
-            UPDATE NATS KV state with decision and reasoning
-        </dependency_resolution>
-      </branch_dependency_analysis>
-      
-      <commit_execution_loop>
-        FOR each commit in execution plan:
-          <branch_operations>
-            IF commit.branch != current_branch:
-              CHECK if branch exists
-              IF branch does not exist:
-                CREATE branch: git checkout -b ${commit.branch}
-              ELSE:
-                SWITCH to branch: git checkout ${commit.branch}
-              UPDATE current_branch in NATS KV state
-          </branch_operations>
-          
-          <file_staging>
-            FOR each file in commit.files:
-              CHECK if file exists and has changes
-              IF file exists:
-                STAGE file: git add ${file}
-                ADD to current_commit_files in state
-              ELSE:
-                WARN: "File ${file} not found or unchanged"
-                RECORD warning in state
-          </file_staging>
-          
-          <commit_creation>
-            <conflict_detection>
-              TRY to create commit with message: git commit -m "${commit.message}"
-              IF merge conflicts detected:
-                CREATE descriptive stash: git stash push -m "PEER-git-commit: remaining files from ${current_branch}"
-                UPDATE NATS KV state to "paused_for_conflict"
-                STORE conflict context: {
-                  "conflicted_files": ${get_conflicted_files},
-                  "stash_ref": ${get_stash_ref},
-                  "stash_message": "PEER-git-commit: remaining files from ${current_branch}",
-                  "resolution_branch": ${current_branch}
-                }
-                PROVIDE user with resolution instructions
-                STOP execution with resume instructions
-              ELSE:
-                RECORD successful commit hash
-                INCREMENT progress.current_step
-                ADD commit hash to progress.completed_commits
-                UPDATE NATS KV state with progress
-            </conflict_detection>
-          </commit_creation>
-        END FOR
+      <action>
+        DELEGATE: multi-branch execution to multi-branch-execution.md
         
-        UPDATE final state to "completed" with completion timestamp
-      </commit_execution_loop>
+        REFERENCE: @~/.agent-os/instructions/meta/multi-branch-execution.md
+        EXECUTE: Complete multi-branch execution workflow:
+          1. Execution Context Initialization workflow
+          2. Initial Stash Operations workflow (preserve uncommitted changes)  
+          3. Partial Execution Support workflow (--branch flag handling)
+          4. Branch Management Operations workflow
+          5. File Staging and Commit Operations workflow
+          6. Conflict Detection and Recovery workflow
+          7. Resume and Recovery Operations workflow
+          8. Execution Progress Tracking throughout
+        
+        COORDINATE: with user-interaction-workflows.md for dependency decisions
+        INTEGRATE: with git-commit-state-management.md for progress tracking
+        HANDLE: all error conditions through git-error-recovery.md workflows
+        SUPPORT: both full execution and partial execution (--branch flag) modes
+        PRESERVE: initial stash management for file restoration
+        RETURN: execution completion status and branch operation results
+      </action>
     </execution_engine>
+    
+  </step>
+  
+  <step number="5.5" name="plan_deviation_detection" conditional="true">
+    
+    ### Step 5.5: Plan Deviation Detection and User Confirmation (Conditional)
+    
+    <conditional_execution>
+      IF MODE != plan_execution:
+        SKIP this entire step
+        PROCEED to step 6
+    </conditional_execution>
+    
+    <deviation_detection>
+      <action>
+        DELEGATE: plan deviation handling to user-interaction-workflows.md
+        
+        REFERENCE: @~/.agent-os/instructions/meta/user-interaction-workflows.md
+        EXECUTE: Plan deviation detection and user confirmation workflow:
+          1. Detect deviation conditions (plan vs actual state comparison)
+          2. Present deviation report with visual decision tree
+          3. Capture user decision with consequence explanation
+          4. Execute chosen strategy (cancel/update-plan/proceed)
+        
+        INTEGRATE: with git-commit-state-management.md for deviation logging
+        HANDLE: user decision timeout and invalid responses
+        ENFORCE: plan adherence requirements and deviation documentation
+        COORDINATE: with git-error-recovery.md if execution halts
+        RETURN: user decision and execution continuation authorization
+      </action>
+    </deviation_detection>
     
   </step>
   
@@ -347,6 +308,13 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
                 ${enhanced_mode ? '- Execution context: PEER-enhanced' : '- Execution context: Direct'}
                 ${skip_precommit ? '- Precommit: Skipped by user request' : ''}
                 
+                EXPLICIT CONSTRAINTS FOR SUBAGENTS:
+                - Do NOT modify any files beyond git operations
+                - Do NOT make autonomous decisions about staging or commit content
+                - Do NOT deviate from specified parameters
+                - Follow EXACTLY the workflow steps provided
+                - Report any unexpected conditions instead of making assumptions
+
                 Perform the following:
                 1. Check git status and identify changed files
                 2. Stage appropriate files for commit
@@ -374,6 +342,18 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
                 ${MODE == 'resume_execution' ? '- Resuming from: ' + selected_execution : ''}
                 - NATS KV state key: ${execution_state_key}
                 
+
+                CRITICAL PLAN ADHERENCE CONSTRAINTS:
+                - EXECUTE ONLY the operations specified in the loaded plan
+                - Do NOT make autonomous modifications to plan steps
+                - Do NOT stage files beyond those specified in plan
+                - Do NOT modify commit messages from plan specifications
+                - Do NOT create additional branches beyond plan requirements
+                - HALT execution and request user confirmation if deviations are detected
+                - ISOLATE MCP context to current commit files only (not entire plan)
+                - Follow plan branch sequencing EXACTLY as specified
+                - Report ANY discrepancies between plan and actual state immediately
+
                 Enhanced operations completed in previous steps:
                 1. Plan file loaded and validated (if applicable)
                 2. NATS KV state initialized/resumed
@@ -462,6 +442,47 @@ When executed through PEER (`/peer --instruction=git-commit`), the PEER executor
    - Captures validation patterns
    - Documents any issues for future reference
 
+## Plan Adherence Requirements
+
+**CRITICAL**: When executing git-commit through PEER with commit plans, the following requirements are inviolable:
+
+### Plan Immutability
+- Commit plans represent approved execution sequences that MUST NOT be modified autonomously
+- All plan steps, file specifications, commit messages, and branch targeting are binding
+- Any deviations from the plan require explicit user confirmation
+- Subagents MUST NOT make independent decisions about plan modifications
+
+### Execution Constraints
+- File staging MUST match exactly what is specified in the plan
+- Commit messages MUST use the exact text from the plan specification
+- Branch creation and switching MUST follow plan sequencing exactly
+- No additional files may be staged beyond plan requirements
+- No additional commits may be created beyond plan specifications
+
+### Deviation Handling
+- ALL deviations from the plan MUST trigger immediate execution halt
+- Users MUST be presented with clear deviation details and impact assessment
+- Execution may only continue after explicit user confirmation of deviation
+- Deviations MUST be recorded in NATS KV state for audit purposes
+
+### MCP Context Isolation
+- MCP validation MUST receive only files relevant to the current commit
+- MCP MUST NOT receive the entire plan context or unrelated files
+- Each commit in a multi-commit plan MUST be validated independently
+- MCP context isolation prevents over-validation and maintains plan integrity
+
+### Subagent Constraints
+- All delegated agents receive explicit constraints preventing autonomous plan modifications
+- Subagents MUST report unexpected conditions rather than making assumptions
+- No subagent may stage, commit, or branch beyond explicit plan specifications
+- All subagent operations MUST align with plan adherence requirements
+
+### Failure Recovery
+- Plan execution failures MUST preserve partial progress in NATS KV state
+- Resume functionality MUST maintain plan adherence for remaining steps
+- Conflict resolution MUST not violate plan specifications
+- Recovery operations MUST undergo deviation detection before proceeding
+
 ## Arguments Reference
 
 ### --message
@@ -485,46 +506,43 @@ When executed through PEER (`/peer --instruction=git-commit`), the PEER executor
 
 ### --continue
 - **Type**: Boolean flag
-- **Required**: No (mutually exclusive with --plan)
+- **Required**: No (mutually exclusive with --plan and --branch)
 - **Description**: Resume incomplete git commit execution from NATS KV state
 - **Behavior**: Searches for incomplete executions and prompts user to select
 - **Example**: `--continue`
 
+
+### --branch
+- **Type**: String (branch name)
+- **Required**: No (requires --plan to be provided)
+- **Description**: Execute only the specified branch from the commit plan (partial execution)
+- **Validation**: Branch name must exist in the provided plan file
+- **Behavior**: Sets execution to partial mode, restores original files after completion
+- **Example**: `--branch=feature/authentication`
+
 ## Error Handling
 
 <error_patterns>
-  <git_errors>
-    - No changes to commit: Inform user no changes detected
-    - Uncommitted changes: Let git-workflow handle staging
-    - Push failures: Delegate to git-workflow error handling
-    - Branch switching failures: Log to NATS KV state and provide recovery
-    - Merge conflicts: Create stash and transition to conflict resolution mode
-  </git_errors>
   
-  <validation_errors>
-    - MCP validation failures: Handled by PEER executor
-    - User cancellation: Exit gracefully with status message
-  </validation_errors>
-  
-  <plan_execution_errors>
-    - Plan file not found: List available files in .agent-os/commit-plan/
-    - Invalid plan structure: Reference schema documentation for corrections
-    - Plan validation failure: Provide specific validation errors
-    - Missing plan directory: Create directory and inform user
-  </plan_execution_errors>
-  
-  <state_management_errors>
-    - NATS KV connection failure: Retry with exponential backoff
-    - State corruption: Provide manual recovery instructions
-    - Incomplete execution not found: Guide user to start new execution
-    - Stash reference missing: Provide manual cleanup guidance
-  </state_management_errors>
-  
-  <dependency_resolution_errors>
-    - File conflict between branches: Trigger user decision workflow
-    - Branch dependency cycle: Detect and report circular dependencies
-    - User decision timeout: Prompt for explicit choice
-  </dependency_resolution_errors>
+  <action>
+    DELEGATE: all error handling to git-error-recovery.md
+    
+    REFERENCE: @~/.agent-os/instructions/meta/git-error-recovery.md
+    EXECUTE: Comprehensive error handling workflows:
+      1. Error Classification and Detection workflow
+      2. Transient Error Handling workflow (with retry strategies)
+      3. Permanent Error Recovery workflow (conflicts, corruption, permissions)
+      4. State Preservation During Errors workflow  
+      5. Recovery Verification and Validation workflow
+      6. Error Reporting and User Communication workflow
+    
+    COORDINATE: with user-interaction-workflows.md for user guidance
+    INTEGRATE: with git-commit-state-management.md for error state persistence
+    SUPPORT: all error types across git operations, validation, and state management
+    PROVIDE: context-sensitive error reporting and recovery instructions
+    MAINTAIN: execution state preservation and resume capability
+  </action>
+
 </error_patterns>
 
 ## Notes
