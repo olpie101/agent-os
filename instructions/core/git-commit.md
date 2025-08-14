@@ -40,6 +40,7 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
 # Execute a commit plan file
 /peer --instruction=git-commit --plan=commit-plan-2025-08-13-17-30.json
 
+
 # Execute only a specific branch from plan (partial execution)
 /peer --instruction=git-commit --plan=commit-plan-2025-08-13-17-30.json --branch=feature/auth
 
@@ -78,7 +79,6 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
         - If --plan provided, file must exist in .agent-os/commit-plan/
         - If --branch provided, --plan must also be provided
         - --branch and --continue are mutually exclusive
-        
       STORE parsed values for use in workflow
     </argument_parsing>
     
@@ -140,7 +140,6 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
       
       STORE: isolated_context_per_commit for use in execution steps
     </mcp_context_isolation>
-    
   </step>
   
   <step number="3" name="plan_file_handling" conditional="true">
@@ -315,7 +314,7 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
                 - Do NOT deviate from specified parameters
                 - Follow EXACTLY the workflow steps provided
                 - Report any unexpected conditions instead of making assumptions
-                
+
                 Perform the following:
                 1. Check git status and identify changed files
                 2. Stage appropriate files for commit
@@ -343,6 +342,7 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
                 ${MODE == 'resume_execution' ? '- Resuming from: ' + selected_execution : ''}
                 - NATS KV state key: ${execution_state_key}
                 
+
                 CRITICAL PLAN ADHERENCE CONSTRAINTS:
                 - EXECUTE ONLY the operations specified in the loaded plan
                 - Do NOT make autonomous modifications to plan steps
@@ -353,7 +353,7 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
                 - ISOLATE MCP context to current commit files only (not entire plan)
                 - Follow plan branch sequencing EXACTLY as specified
                 - Report ANY discrepancies between plan and actual state immediately
-                
+
                 Enhanced operations completed in previous steps:
                 1. Plan file loaded and validated (if applicable)
                 2. NATS KV state initialized/resumed
@@ -511,6 +511,7 @@ When executed through PEER (`/peer --instruction=git-commit`), the PEER executor
 - **Behavior**: Searches for incomplete executions and prompts user to select
 - **Example**: `--continue`
 
+
 ### --branch
 - **Type**: String (branch name)
 - **Required**: No (requires --plan to be provided)
@@ -541,7 +542,7 @@ When executed through PEER (`/peer --instruction=git-commit`), the PEER executor
     PROVIDE: context-sensitive error reporting and recovery instructions
     MAINTAIN: execution state preservation and resume capability
   </action>
-  
+
 </error_patterns>
 
 ## Notes
