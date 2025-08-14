@@ -58,9 +58,9 @@ Use the context-fetcher subagent to identify which spec to refine by extracting 
 
 <step number="2" subagent="context-fetcher" name="load_spec_files">
 
-### Step 2: Load Spec Files
+### Step 2: Load Spec Files and Establish Boundaries
 
-Use the context-fetcher subagent to load all spec files including dynamically discovered sub-specs.
+Use the context-fetcher subagent to load all spec files including dynamically discovered sub-specs, and establish strict file modification boundaries.
 
 <required_files>
   - spec.md (main requirements)
@@ -78,9 +78,25 @@ Use the context-fetcher subagent to load all spec files including dynamically di
   </sub_specs_scan>
 </dynamic_loading>
 
+<modification_boundaries>
+  STORE: SPEC_FOLDER_PATH = .agent-os/specs/YYYY-MM-DD-[SPEC_NAME]/
+  
+  ALLOWED_MODIFICATIONS:
+    - Files within [SPEC_FOLDER_PATH] only
+    - Only .md documentation files
+    - No implementation files ever
+  
+  ENFORCEMENT_DIRECTIVE:
+    - ALL subsequent file-creator invocations MUST include these constraints
+    - ANY attempt to modify files outside SPEC_FOLDER_PATH must be rejected
+    - This is a spec refinement - ONLY documentation updates allowed
+</modification_boundaries>
+
 <instructions>
   ACTION: Load all spec documentation
   INCLUDE: Dynamically discovered sub-specs
+  ESTABLISH: File modification boundaries for all subsequent steps
+  STORE: SPEC_FOLDER_PATH for constraint enforcement
   PREPARE: Context for refinement decisions
 </instructions>
 
@@ -157,10 +173,28 @@ Use the file-creator subagent to update spec.md only if requirements or scope ch
 </preservation_rules>
 
 <instructions>
-  ACTION: Conditionally update spec.md
+  ACTION: Use file-creator subagent
+  REQUEST: "Update spec.md at [SPEC_FOLDER_PATH]/spec.md
+            
+            CRITICAL CONSTRAINTS:
+            - You may ONLY modify this specific file: [SPEC_FOLDER_PATH]/spec.md
+            - You MUST NOT modify any files outside of [SPEC_FOLDER_PATH]
+            - You MUST NOT modify any implementation files
+            - This is a spec refinement - only documentation updates allowed
+            
+            Updates needed: [SPECIFIC_CHANGES]"
+  VALIDATE: Changes only affect spec.md
   PRESERVE: Unchanged content
   DOCUMENT: Significant changes
 </instructions>
+
+<post_step_validation>
+  VERIFY: Modified file is within [SPEC_FOLDER_PATH]
+  CHECK: No implementation files were modified
+  IF violation detected:
+    ERROR: "File modification outside spec folder attempted"
+    STOP: Refinement process
+</post_step_validation>
 
 </step>
 
@@ -185,10 +219,24 @@ Use the file-creator subagent to regenerate spec-lite.md only if spec.md was upd
 </regeneration_process>
 
 <instructions>
-  ACTION: Conditionally regenerate spec-lite.md
+  ACTION: Use file-creator subagent
+  REQUEST: "Regenerate spec-lite.md at [SPEC_FOLDER_PATH]/spec-lite.md
+            
+            CRITICAL CONSTRAINTS:
+            - You may ONLY modify this specific file: [SPEC_FOLDER_PATH]/spec-lite.md
+            - You MUST NOT modify any files outside of [SPEC_FOLDER_PATH]
+            - You MUST NOT modify any implementation files
+            
+            Source content from: [SPEC_FOLDER_PATH]/spec.md"
+  VALIDATE: Changes only affect spec-lite.md
   ENSURE: Consistency with spec.md
   KEEP: Concise format
 </instructions>
+
+<post_step_validation>
+  VERIFY: Modified file is within [SPEC_FOLDER_PATH]
+  CHECK: No implementation files were modified
+</post_step_validation>
 
 </step>
 
@@ -219,10 +267,25 @@ Use the file-creator subagent to update technical specifications based on refine
 </technical_preservation>
 
 <instructions>
-  ACTION: Update technical specifications
+  ACTION: Use file-creator subagent
+  REQUEST: "Update technical-spec.md at [SPEC_FOLDER_PATH]/sub-specs/technical-spec.md
+            
+            CRITICAL CONSTRAINTS:
+            - You may ONLY modify this specific file: [SPEC_FOLDER_PATH]/sub-specs/technical-spec.md
+            - You MUST NOT modify any files outside of [SPEC_FOLDER_PATH]
+            - You MUST NOT modify any implementation files
+            - This is documentation only - no code changes
+            
+            Technical updates needed: [SPECIFIC_CHANGES]"
+  VALIDATE: Changes only affect technical-spec.md
   FOCUS: Technical implementation changes
   PRESERVE: Working approaches
 </instructions>
+
+<post_step_validation>
+  VERIFY: Modified file is within [SPEC_FOLDER_PATH]
+  CHECK: No implementation files were modified
+</post_step_validation>
 
 </step>
 
@@ -247,10 +310,25 @@ Use the file-creator subagent to update any sub-specs affected by refinements.
 </sub_spec_types>
 
 <instructions>
-  ACTION: Update affected sub-specs
+  ACTION: Use file-creator subagent
+  REQUEST: "Update sub-specs at [SPEC_FOLDER_PATH]/sub-specs/
+            
+            CRITICAL CONSTRAINTS:
+            - You may ONLY modify .md files within: [SPEC_FOLDER_PATH]/sub-specs/
+            - You MUST NOT modify any files outside of [SPEC_FOLDER_PATH]
+            - You MUST NOT modify any implementation files
+            - Only documentation updates allowed
+            
+            Sub-specs to update: [LIST_OF_SUB_SPECS]"
+  VALIDATE: All changes within sub-specs directory
   SKIP: Unaffected sub-specs
   MAINTAIN: Consistency across specs
 </instructions>
+
+<post_step_validation>
+  VERIFY: All modified files are within [SPEC_FOLDER_PATH]/sub-specs/
+  CHECK: No implementation files were modified
+</post_step_validation>
 
 </step>
 
@@ -297,11 +375,26 @@ Use the file-creator subagent to update tasks while preserving completed work ap
 </task_modification_examples>
 
 <instructions>
-  ACTION: Update tasks with preservation rules
+  ACTION: Use file-creator subagent
+  REQUEST: "Update tasks.md at [SPEC_FOLDER_PATH]/tasks.md
+            
+            CRITICAL CONSTRAINTS:
+            - You may ONLY modify this specific file: [SPEC_FOLDER_PATH]/tasks.md
+            - You MUST NOT modify any files outside of [SPEC_FOLDER_PATH]
+            - You MUST NOT modify any implementation files
+            - Preserve completion status of tasks as specified
+            
+            Task updates with preservation rules: [SPECIFIC_CHANGES]"
+  VALIDATE: Changes only affect tasks.md
   PRESERVE: Completed work appropriately
   ADD: New tasks for refinements
   DOCUMENT: Significant task changes
 </instructions>
+
+<post_step_validation>
+  VERIFY: Modified file is within [SPEC_FOLDER_PATH]
+  CHECK: No implementation files were modified
+</post_step_validation>
 
 </step>
 
@@ -341,10 +434,24 @@ Use the file-creator subagent to document the refinement in refinement-log.md.
 </log_entry_template>
 
 <instructions>
-  ACTION: Document refinement in log
+  ACTION: Use file-creator subagent
+  REQUEST: "Create/update refinement-log.md at [SPEC_FOLDER_PATH]/refinement-log.md
+            
+            CRITICAL CONSTRAINTS:
+            - You may ONLY modify this specific file: [SPEC_FOLDER_PATH]/refinement-log.md
+            - You MUST NOT modify any files outside of [SPEC_FOLDER_PATH]
+            - Append new entry if file exists, create if not
+            
+            Log entry: [REFINEMENT_ENTRY]"
+  VALIDATE: Changes only affect refinement-log.md
   INCLUDE: All changes made
   EXPLAIN: Rationale and impact
 </instructions>
+
+<post_step_validation>
+  VERIFY: Modified file is within [SPEC_FOLDER_PATH]
+  CHECK: No implementation files were modified
+</post_step_validation>
 
 </step>
 
@@ -407,6 +514,13 @@ Provide a clear summary of refinements made and their impact on the spec.
     - Clear traceability of changes
     - Professional documentation quality
   </maintain>
+  <enforce_boundaries>
+    - CRITICAL: Only modify files within SPEC_FOLDER_PATH
+    - CRITICAL: Never modify implementation files (.js, .ts, .py, .go, etc.)
+    - CRITICAL: All file-creator invocations must include explicit path constraints
+    - CRITICAL: Reject any attempts to modify files outside spec directory
+    - VALIDATION: Verify all changes are within allowed boundaries after each step
+  </enforce_boundaries>
 </standards>
 
 <final_checklist>
@@ -418,5 +532,8 @@ Provide a clear summary of refinements made and their impact on the spec.
     - [ ] Task preservation rules applied
     - [ ] Refinement logged
     - [ ] Summary provided
+    - [ ] ✅ NO implementation files modified
+    - [ ] ✅ ALL changes contained within [SPEC_FOLDER_PATH]
+    - [ ] ✅ File-creator constraints enforced in all steps
   </verify>
 </final_checklist>
