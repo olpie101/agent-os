@@ -8,8 +8,9 @@ encoding: UTF-8
 
 # Unified State Schema for PEER Pattern
 
-> Version: 1 (Simplified, no locking)
+> Version: 1.1 (Simplified, no locking, with cycle_summary)
 > Created: 2025-08-06
+> Updated: 2025-08-10
 > Purpose: Define unified state structure for PEER cycles
 
 ## Overview
@@ -18,7 +19,7 @@ This document defines the single source of truth for the unified state structure
 
 ## Schema Version Information
 
-- **Version:** 1
+- **Version:** 1.1
 - **Type:** Simplified (no optimistic locking)
 - **Storage:** Single NATS KV entry per cycle
 - **Key Pattern:** `[KEY_PREFIX].cycle.[CYCLE_NUMBER]`
@@ -54,6 +55,12 @@ phases: object
   Description: Phase-specific data for plan, execute, express, review
   Required: Yes
   Purpose: Store phase outputs and status
+
+cycle_summary: object
+  Description: High-level summary of cycle results (owned by Review phase)
+  Required: No (only after review phase completes)
+  Purpose: Provide quick overview without traversing all phase outputs
+  Owner: Review phase only
 ```
 
 ### Metadata Object
@@ -125,6 +132,40 @@ user_requirements: string
   Example: "Create a spec for user authentication with OAuth2"
 ```
 
+### Cycle Summary Object
+
+```yaml
+success: boolean
+  Description: Whether the cycle completed successfully
+  Required: Yes
+  Example: true
+
+instruction: string
+  Description: The instruction that was executed
+  Required: Yes
+  Example: "create-spec"
+
+summary: string
+  Description: Brief summary of what was accomplished
+  Required: Yes
+  Example: "Successfully created spec for user authentication feature"
+
+highlights: array[string]
+  Description: Key achievements or notable points (max 3)
+  Required: Yes
+  Example: ["Created comprehensive spec documentation", "Defined 8 technical tasks", "Established API contracts"]
+
+completion: number
+  Description: Percentage of instruction completed (0-100)
+  Required: Yes
+  Example: 100
+
+next_action: string
+  Description: Recommended next step for the user
+  Required: Yes
+  Example: "Review the spec and proceed with task execution"
+```
+
 ### Phases Object
 
 Each phase (plan, execute, express, review) contains:
@@ -164,7 +205,7 @@ error: string
 
 ```json
 {
-  "version": 1,
+  "version": 1.1,
   "cycle_id": "peer.spec.user-auth.cycle.1",
   "metadata": {
     "instruction_name": "create-spec",
