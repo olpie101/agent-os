@@ -184,6 +184,8 @@
     (subpath (string-append (param "HOME") "/.rustup"))   ;; Rust toolchain
     (subpath (string-append (param "HOME") "/.bun"))      ;; Bun runtime
     (subpath (string-append (param "HOME") "/.kcl"))
+    (subpath (string-append (param "HOME") "/.config/gh"))
+    (subpath (string-append (param "HOME") "/.config/containers"))
     
     ;; Package manager caches (read-only)
     (subpath (string-append (param "HOME") "/.npm"))      ;; NPM cache
@@ -216,6 +218,7 @@
     
     ;; Shell configuration files (read-only for shell initialization)
     (literal (string-append (param "HOME") "/.bashrc"))
+    (literal (string-append (param "HOME") "/.ssh/known_hosts"))
     (literal (string-append (param "HOME") "/.zshrc"))
     (literal (string-append (param "HOME") "/.npmrc"))
     (literal (string-append (param "HOME") "/.bash_profile"))
@@ -225,6 +228,7 @@
     (literal (string-append (param "HOME") "/.fzf.zsh"))      ;; FZF zsh configuration
     (subpath (string-append (param "HOME") "/go/bin"))
     (subpath (string-append (param "HOME") "/.local/bin"))
+    (subpath (string-append (param "HOME") "/.local/share/containers"))
     (subpath (string-append (param "HOME") "/.local/share/nats/nsc/keys/creds/sava_technologies/DEV_EDUARDO"))
     (subpath (string-append (param "HOME") "/.krew/bin"))
     (subpath (string-append (param "HOME") "/Library/Android/sdk/emulator"))
