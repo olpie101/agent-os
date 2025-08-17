@@ -110,7 +110,7 @@ echo ""
 echo "📥 Downloading Claude Code command files to ~/.claude/commands/"
 
 # Commands
-for cmd in plan-product create-spec execute-tasks analyze-product peer git-commit; do
+for cmd in all-tools plan-product create-spec execute-tasks analyze-product peer git-commit; do
     if [ -f "$HOME/.claude/commands/${cmd}.md" ] && [ "$OVERWRITE_COMMANDS" = false ]; then
         echo "  ⚠️  ~/.claude/commands/${cmd}.md already exists - skipping"
     else
