@@ -24,7 +24,7 @@ def wave_file(filename, pcm, channels=1, rate=24000, sample_width=2):
 
 
 client = genai.Client(
-    api_key="AIzaSyCjE_Mki5ueTDXofK-JM2NPr9LaAPFt0lM"
+    api_key=""
 )
 
 response = client.models.generate_content(
