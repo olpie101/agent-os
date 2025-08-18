@@ -33,8 +33,12 @@ async def main():
     - Live audio playback via LocalAudioPlayer
     """
 
-    # Load environment variables
-    load_dotenv()
+    # Load dotenv from custom path if specified
+    env_file = os.getenv("CCAOS_ENV_FILE")
+    if env_file:
+        load_dotenv(dotenv_path=env_file)
+    else:
+        load_dotenv()
 
     # Get API key from environment
     api_key = os.getenv("OPENAI_API_KEY")

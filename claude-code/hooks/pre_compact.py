@@ -15,7 +15,12 @@ from datetime import datetime
 
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    # Load dotenv from custom path if specified
+    env_file = os.getenv("CCAOS_ENV_FILE")
+    if env_file:
+        load_dotenv(dotenv_path=env_file)
+    else:
+        load_dotenv()
 except ImportError:
     pass  # dotenv is optional
 
