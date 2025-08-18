@@ -5,7 +5,7 @@
 
 ## Overview
 
-Add Gemini TTS support to Claude Code hooks system while maintaining existing OpenAI TTS functionality. This enhancement will provide users with a new high-quality TTS option while preserving the current fallback hierarchy and improving overall TTS availability.
+Enhance Claude Code hooks system with comprehensive Gemini integration by adding both TTS and LLM support while maintaining existing OpenAI functionality. This enhancement provides users with high-quality Gemini TTS and LLM options while preserving current fallback hierarchies and improving overall system availability.
 
 ## User Stories
 
@@ -29,25 +29,74 @@ As a Claude Code user, I want to keep my existing OpenAI TTS setup working, so t
 - pyttsx3 remains as offline fallback option
 - No disruption to existing TTS functionality
 
+### Gemini LLM Integration
+
+As a Claude Code user, I want access to Gemini LLM for completion messages and general prompting, so that I have a consistent Google ecosystem experience with my TTS configuration.
+
+**Detailed Workflow:**
+- User configures GOOGLE_API_KEY for both TTS and LLM functionality
+- Claude Code hooks provide gemini.py script in utils/llm/ directory
+- Script follows same interface patterns as anth.py and oai.py
+- Users can test LLM functionality with CLI interface including --completion flag
+- ENGINEER_NAME personalization works consistently with existing LLM scripts
+
+### LLM Pattern Consistency and Priority
+
+As a Claude Code developer, I want Gemini LLM integration to follow established patterns and have highest priority, so that the codebase remains maintainable and users benefit from Google's latest models.
+
+**Detailed Workflow:**
+- gemini.py implements prompt_llm() and generate_completion_message() functions
+- CLI interface matches anth.py and oai.py with --completion flag support
+- Error handling returns None on failures like existing scripts
+- Environment variable authentication follows established patterns
+- google-genai package integration uses current best practices
+- LLM selection priority: Gemini > OpenAI > Anthropic for completion message generation
+
 ## Spec Scope
 
+### TTS Integration (Completed)
 1. **Gemini TTS Implementation** - Create new gemini_tts.py following existing TTS script patterns
 2. **Hook Integration** - Update get_tts_script_path() functions to include Gemini in priority order
 3. **Priority Logic Update** - Change from ElevenLabs > OpenAI > pyttsx3 to Gemini > OpenAI > pyttsx3
 4. **Pattern Consistency** - Ensure gemini_tts.py matches structure and interface of existing TTS scripts
 5. **Testing Strategy** - Include comprehensive test coverage for new TTS integration
 
+### LLM Integration (New)
+6. **Gemini LLM Implementation** - Create new gemini.py in claude-code/hooks/utils/llm/ following anth.py and oai.py patterns
+7. **Function Interface** - Implement prompt_llm() and generate_completion_message() functions with identical signatures
+8. **CLI Interface** - Support --completion flag and direct prompt testing like existing LLM scripts
+9. **ENGINEER_NAME Support** - Include personalization functionality matching existing LLM integration patterns
+10. **Google-GenAI Integration** - Use google-genai package following current best practices for text generation
+11. **LLM Priority Order** - Establish Gemini as highest priority LLM provider (Gemini > OpenAI > Anthropic)
+
 ## Out of Scope
 
+### TTS Related
 - Removal of pyttsx3 fallback functionality
 - Changes to existing OpenAI TTS implementation
 - Modifications to ElevenLabs script (will be deprioritized, not removed)
 - Changes to TTS script interface or command-line argument structure
 - Audio format or quality modifications to existing scripts
 
+### LLM Related
+- Modifications to existing anth.py or oai.py scripts
+- Changes to LLM script interface or function signatures
+- Integration with other Google services beyond text generation
+- Custom model training or fine-tuning capabilities
+- Advanced conversation memory or context management
+
 ## Expected Deliverable
 
+### TTS Integration (Completed)
 1. **Functional Gemini TTS Integration** - Users can use Gemini TTS by setting GOOGLE_API_KEY
 2. **Preserved OpenAI Support** - Existing OpenAI TTS functionality remains unchanged
 3. **Updated Priority Logic** - Hook functions correctly prioritize Gemini > OpenAI > pyttsx3
 4. **Comprehensive Tests** - All TTS functionality covered by automated test suite
+
+### LLM Integration (New Deliverables)
+5. **Functional Gemini LLM Script** - gemini.py provides same interface as anth.py and oai.py
+6. **CLI Testing Interface** - --completion flag and direct prompting work correctly
+7. **ENGINEER_NAME Personalization** - Completion messages include engineer name appropriately
+8. **Pattern Compliance** - Script structure and error handling match existing LLM scripts
+9. **Google-GenAI Integration** - Proper use of google-genai package for text generation
+10. **LLM Priority Implementation** - Hook systems prioritize Gemini > OpenAI > Anthropic for LLM selection
