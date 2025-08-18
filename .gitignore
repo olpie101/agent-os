@@ -31,5 +31,8 @@ node_modules/
 
 # Temporary files
 *.tmp
+tmp/
 *.temp
 .agent-os/commit-plan
+.env
+__pycache__/
