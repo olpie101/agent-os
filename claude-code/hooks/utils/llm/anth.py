@@ -22,7 +22,12 @@ def prompt_llm(prompt_text):
     Returns:
         str: The model's response text, or None if error
     """
-    load_dotenv()
+    # Load dotenv from custom path if specified
+    env_file = os.getenv("CCAOS_ENV_FILE")
+    if env_file:
+        load_dotenv(dotenv_path=env_file)
+    else:
+        load_dotenv()
 
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:

@@ -31,6 +31,7 @@ ENVIRONMENT VARIABLES:
     NATS_CREDS         Path to NATS credentials file (default: none)
     SANDBOX_VERBOSE    Enable verbose logging (true/false, default: false)
     EXTRA_EXEC_PATH    Additional executable path (default: none)
+    CCAOS_ENV_FILE     Path to .env file for hooks (default: \$HOME/.config/ccaos/.env)
     
 EXAMPLES:
     # Run Claude Code with defaults
@@ -93,6 +94,23 @@ WORKING_DIR="${WORKING_DIR:-$(pwd)}"
 AGENT_OS_DIR="${AGENT_OS_DIR:-$HOME/.agent-os}"
 NATS_URL="${NATS_URL:-nats://localhost:4222}"
 HOME_DIR="${HOME}"
+
+# Set CCAOS_ENV_FILE with default location
+CCAOS_ENV_FILE="${CCAOS_ENV_FILE:-$HOME/.config/ccaos/.env}"
+
+# Ensure the default .env file exists (create if not)
+if [ ! -f "$CCAOS_ENV_FILE" ]; then
+    # Create directory if it doesn't exist
+    mkdir -p "$(dirname "$CCAOS_ENV_FILE")"
+    # Create empty .env file
+    touch "$CCAOS_ENV_FILE"
+    if [ "$VERBOSE" = "true" ]; then
+        echo -e "${YELLOW}Created default .env file:${NC} $CCAOS_ENV_FILE"
+    fi
+fi
+
+# Export CCAOS_ENV_FILE so it's available to child processes
+export CCAOS_ENV_FILE
 
 # Optional parameters (only used if defined)
 NATS_CREDS="${NATS_CREDS:-}"
@@ -176,6 +194,7 @@ SANDBOX_ARGS+=("-D" "AUDIT_LOG_PATH=$AUDIT_LOG_PATH")
 SANDBOX_ARGS+=("-D" "HOME=$HOME_DIR")
 SANDBOX_ARGS+=("-D" "NATS_URL=$NATS_URL")
 SANDBOX_ARGS+=("-D" "VERBOSE_MODE=$VERBOSE_MODE")
+SANDBOX_ARGS+=("-D" "CCAOS_ENV_FILE=$CCAOS_ENV_FILE")
 
 # Add optional parameters only if defined
 if [ -n "$NATS_CREDS" ]; then

@@ -190,6 +190,7 @@
     (subpath (string-append (param "HOME") "/.kcl"))
     (subpath (string-append (param "HOME") "/.config/gh"))
     (subpath (string-append (param "HOME") "/.config/containers"))
+    (subpath (string-append (param "HOME") "/.config/ccaos"))
     (subpath (string-append (param "HOME") "/.context"))
     
     ;; Package manager caches (read-only)

@@ -17,7 +17,12 @@ from datetime import datetime
 
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    # Load dotenv from custom path if specified
+    env_file = os.getenv("CCAOS_ENV_FILE")
+    if env_file:
+        load_dotenv(dotenv_path=env_file)
+    else:
+        load_dotenv()
 except ImportError:
     pass  # dotenv is optional
 
@@ -62,51 +67,59 @@ def get_tts_script_path():
     return None
 
 
-def get_llm_completion_message():
+def get_llm_script_path():
     """
-    Generate completion message using available LLM services.
-    Priority order: OpenAI > Anthropic > fallback to random message
-    
-    Returns:
-        str: Generated or fallback completion message
+    Determine which LLM script to use based on available API keys.
+    Priority order: Gemini > OpenAI > Anthropic
     """
     # Get current script directory and construct utils/llm path
     script_dir = Path(__file__).parent
     llm_dir = script_dir / "utils" / "llm"
     
-    # Try OpenAI first (highest priority)
-    if os.getenv('OPENAI_API_KEY'):
-        oai_script = llm_dir / "oai.py"
-        if oai_script.exists():
-            try:
-                result = subprocess.run([
-                    "uv", "run", str(oai_script), "--completion"
-                ], 
-                capture_output=True,
-                text=True,
-                timeout=10
-                )
-                if result.returncode == 0 and result.stdout.strip():
-                    return result.stdout.strip()
-            except (subprocess.TimeoutExpired, subprocess.SubprocessError):
-                pass
+    # Check for Gemini API keys (highest priority)
+    if os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY'):
+        gemini_script = llm_dir / "gemini.py"
+        if gemini_script.exists():
+            return str(gemini_script)
     
-    # Try Anthropic second
+    # Check for OpenAI API key (second priority)
+    if os.getenv('OPENAI_API_KEY'):
+        openai_script = llm_dir / "oai.py"
+        if openai_script.exists():
+            return str(openai_script)
+    
+    # Check for Anthropic API key (third priority)
     if os.getenv('ANTHROPIC_API_KEY'):
         anth_script = llm_dir / "anth.py"
         if anth_script.exists():
-            try:
-                result = subprocess.run([
-                    "uv", "run", str(anth_script), "--completion"
-                ], 
-                capture_output=True,
-                text=True,
-                timeout=10
-                )
-                if result.returncode == 0 and result.stdout.strip():
-                    return result.stdout.strip()
-            except (subprocess.TimeoutExpired, subprocess.SubprocessError):
-                pass
+            return str(anth_script)
+    
+    return None
+
+
+def get_llm_completion_message():
+    """
+    Generate completion message using available LLM services.
+    Priority order: Gemini > OpenAI > Anthropic > fallback to random message
+    
+    Returns:
+        str: Generated or fallback completion message
+    """
+    llm_script = get_llm_script_path()
+    
+    if llm_script:
+        try:
+            result = subprocess.run([
+                "uv", "run", llm_script, "--completion"
+            ], 
+            capture_output=True,
+            text=True,
+            timeout=10
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout.strip()
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError):
+            pass
     
     # Fallback to random predefined message
     messages = get_completion_messages()

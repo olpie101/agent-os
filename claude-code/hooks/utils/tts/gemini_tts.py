@@ -17,49 +17,55 @@ from dotenv import load_dotenv
 
 
 def play_audio_data(audio_data):
-    """Play audio data directly using system audio player"""
+    """Play audio data using system audio player via temporary file"""
     try:
-        # Try to use afplay on macOS
-        if sys.platform == "darwin":
-            process = subprocess.Popen(
-                ["afplay", "-"],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
-            process.communicate(input=audio_data)
-            return True
-        
-        # Try to use aplay on Linux
-        elif sys.platform.startswith("linux"):
-            process = subprocess.Popen(
-                ["aplay", "-"],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
-            process.communicate(input=audio_data)
-            return True
-        
-        # Fallback: create temporary file and play
-        else:
-            import tempfile
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
-                tmp_file.write(audio_data)
-                tmp_path = tmp_file.name
-            
-            try:
-                if sys.platform == "win32":
-                    os.system(f'start "" "{tmp_path}"')
-                else:
-                    subprocess.run(["open", tmp_path], check=False)
+        import tempfile
+        # Create temporary file for all platforms
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
+            tmp_file.write(audio_data)
+            tmp_path = tmp_file.name
+
+        try:
+            # Use afplay on macOS
+            if sys.platform == "darwin":
+                subprocess.run(
+                    ["afplay", tmp_path],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False
+                )
                 return True
-            finally:
-                # Clean up temporary file after a delay
-                try:
-                    os.unlink(tmp_path)
-                except:
-                    pass
+
+            # Use aplay on Linux
+            elif sys.platform.startswith("linux"):
+                subprocess.run(
+                    ["aplay", tmp_path],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False
+                )
+                return True
+
+            # Use default system player on Windows
+            elif sys.platform == "win32":
+                os.system(f'start "" "{tmp_path}"')
+                return True
+
+            # Fallback for other systems
+            else:
+                subprocess.run(["open", tmp_path], check=False)
+                return True
+
+        finally:
+            # Clean up temporary file after playback
+            try:
+                # Give a small delay for playback to start
+                import time
+                time.sleep(0.1)
+                os.unlink(tmp_path)
+            except:
+                pass
+
     except Exception:
         return False
 
@@ -93,15 +99,19 @@ def main():
     - Environment variable configuration
     """
 
-    # Load environment variables
-    load_dotenv()
+    # Load dotenv from custom path if specified
+    env_file = os.getenv("CCAOS_ENV_FILE")
+    if env_file:
+        load_dotenv(dotenv_path=env_file)
+    else:
+        load_dotenv()
 
-    # Get API key from environment
-    api_key = os.getenv("GOOGLE_API_KEY")
+    # Get API key from environment (GOOGLE_API_KEY takes priority over GEMINI_API_KEY)
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
     if not api_key:
-        print("❌ Error: GOOGLE_API_KEY not found in environment variables")
+        print("❌ Error: GOOGLE_API_KEY or GEMINI_API_KEY not found in environment variables")
         print("Please add your Google API key to .env file:")
-        print("GOOGLE_API_KEY=your_api_key_here")
+        print("GOOGLE_API_KEY=your_api_key_here  (or GEMINI_API_KEY=your_api_key_here)")
         sys.exit(1)
 
     try:
@@ -142,10 +152,10 @@ def main():
 
             # Extract audio data
             audio_data = response.candidates[0].content.parts[0].inline_data.data
-            
+
             # Convert to WAV format for better compatibility
             wav_data = create_wave_data(audio_data)
-            
+
             # Play audio directly
             if play_audio_data(wav_data):
                 print("✅ Playback complete!")
