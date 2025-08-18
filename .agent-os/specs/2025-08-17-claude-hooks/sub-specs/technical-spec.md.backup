@@ -2,18 +2,25 @@
 
 This is the technical specification for the spec detailed in @.agent-os/specs/2025-08-17-claude-hooks/spec.md
 
+<<<<<<< Updated upstream
 ## TTS Integration Technical Requirements (Completed)
 
 The following TTS requirements have been successfully implemented:
 
+=======
+>>>>>>> Stashed changes
 ## Technical Requirements
 
 ### New Gemini TTS Script Implementation
 
 - **File Location:** `claude-code/hooks/utils/tts/gemini_tts.py`
 - **Pattern Compliance:** Must follow existing TTS script structure (UV script header, dependency block, CLI interface)
+<<<<<<< Updated upstream
 - **Environment Variable:** Check `GOOGLE_API_KEY` first, fallback to `GEMINI_API_KEY` for API authentication
 - **API Key Priority:** `GOOGLE_API_KEY` takes precedence over `GEMINI_API_KEY` for consistency with LLM implementation
+=======
+- **Environment Variable:** Check `GOOGLE_API_KEY` for API authentication
+>>>>>>> Stashed changes
 - **Command Line Interface:** Accept text input via `sys.argv` arguments like other TTS scripts
 - **Error Handling:** Silent failure patterns with graceful degradation
 - **Output Format:** User feedback with emoji status indicators matching existing scripts
@@ -39,13 +46,18 @@ The following TTS requirements have been successfully implemented:
 
 ### Testing Strategy
 
+<<<<<<< Updated upstream
 - **Test File Structure:** All test files must use UV script headers for self-contained execution
 - **Unit Tests:** Test gemini_tts.py script functionality including actual google-genai imports
+=======
+- **Unit Tests:** Test gemini_tts.py script independently with mock API responses
+>>>>>>> Stashed changes
 - **Integration Tests:** Test get_tts_script_path() priority logic with different environment configurations
 - **Fallback Tests:** Verify graceful degradation when Gemini API is unavailable
 - **Environment Tests:** Test all combinations of API key availability
 - **Regression Tests:** Ensure existing OpenAI and pyttsx3 functionality remains intact
 
+<<<<<<< Updated upstream
 ### Test File Requirements
 
 All test files must include UV script headers with dependency declarations including the actual packages being tested:
@@ -73,6 +85,11 @@ All test files must include UV script headers with dependency declarations inclu
 # ]
 # ///
 
+=======
+### Example Test Cases
+
+```python
+>>>>>>> Stashed changes
 # Test priority logic
 def test_gemini_priority_with_all_keys():
     """Test that Gemini is selected when all API keys are available"""
@@ -100,13 +117,17 @@ def test_gemini_script_cli_interface():
 - **google-genai** - Google's Generative AI SDK for Gemini TTS functionality
   - **Justification:** Required for Gemini TTS API integration
   - **Version:** Latest stable version compatible with Python 3.8+
+<<<<<<< Updated upstream
   - **Import:** `from google import genai`
+=======
+>>>>>>> Stashed changes
 
 ## Implementation Notes
 
 - **Scripts/tts/gemini.py Usage:** Reference for API calls only - do NOT copy structure
 - **Pattern Following:** Study openai_tts.py and pyttsx3_tts.py for proper script structure
 - **Error Handling:** Match existing silent failure patterns to avoid disrupting Claude Code workflow
+<<<<<<< Updated upstream
 - **Audio Format:** Use appropriate format for direct playback (likely MP3 with local audio handling)  
 - **Voice Selection:** Choose appropriate Gemini voice for completion announcements
 
@@ -233,3 +254,7 @@ if __name__ == "__main__":
   3. Check ANTHROPIC_API_KEY → Use anth.py
 - **Fallback Logic:** Gracefully fall through priority chain if higher priority APIs unavailable
 - **Selection Function:** Implement get_llm_script_path() similar to get_tts_script_path() pattern
+=======
+- **Audio Format:** Use appropriate format for direct playback (likely MP3 with local audio handling)
+- **Voice Selection:** Choose appropriate Gemini voice for completion announcements
+>>>>>>> Stashed changes

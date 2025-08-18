@@ -5,7 +5,11 @@
 
 ## Overview
 
+<<<<<<< Updated upstream
 Enhance Claude Code hooks system with comprehensive Gemini integration by adding both TTS and LLM support while maintaining existing OpenAI functionality. This enhancement provides users with high-quality Gemini TTS and LLM options while preserving current fallback hierarchies and improving overall system availability.
+=======
+Add Gemini TTS support to Claude Code hooks system while maintaining existing OpenAI TTS functionality. This enhancement will provide users with a new high-quality TTS option while preserving the current fallback hierarchy and improving overall TTS availability.
+>>>>>>> Stashed changes
 
 ## User Stories
 
@@ -29,6 +33,7 @@ As a Claude Code user, I want to keep my existing OpenAI TTS setup working, so t
 - pyttsx3 remains as offline fallback option
 - No disruption to existing TTS functionality
 
+<<<<<<< Updated upstream
 ### Gemini LLM Integration
 
 As a Claude Code user, I want access to Gemini LLM for completion messages and general prompting, so that I have a consistent Google ecosystem experience with my TTS configuration.
@@ -55,12 +60,17 @@ As a Claude Code developer, I want Gemini LLM integration to follow established 
 ## Spec Scope
 
 ### TTS Integration (Completed)
+=======
+## Spec Scope
+
+>>>>>>> Stashed changes
 1. **Gemini TTS Implementation** - Create new gemini_tts.py following existing TTS script patterns
 2. **Hook Integration** - Update get_tts_script_path() functions to include Gemini in priority order
 3. **Priority Logic Update** - Change from ElevenLabs > OpenAI > pyttsx3 to Gemini > OpenAI > pyttsx3
 4. **Pattern Consistency** - Ensure gemini_tts.py matches structure and interface of existing TTS scripts
 5. **Testing Strategy** - Include comprehensive test coverage for new TTS integration
 
+<<<<<<< Updated upstream
 ### LLM Integration (New)
 6. **Gemini LLM Implementation** - Create new gemini.py in claude-code/hooks/utils/llm/ following anth.py and oai.py patterns
 7. **Function Interface** - Implement prompt_llm() and generate_completion_message() functions with identical signatures
@@ -72,12 +82,17 @@ As a Claude Code developer, I want Gemini LLM integration to follow established 
 ## Out of Scope
 
 ### TTS Related
+=======
+## Out of Scope
+
+>>>>>>> Stashed changes
 - Removal of pyttsx3 fallback functionality
 - Changes to existing OpenAI TTS implementation
 - Modifications to ElevenLabs script (will be deprioritized, not removed)
 - Changes to TTS script interface or command-line argument structure
 - Audio format or quality modifications to existing scripts
 
+<<<<<<< Updated upstream
 ### LLM Related
 - Modifications to existing anth.py or oai.py scripts
 - Changes to LLM script interface or function signatures
@@ -100,3 +115,11 @@ As a Claude Code developer, I want Gemini LLM integration to follow established 
 8. **Pattern Compliance** - Script structure and error handling match existing LLM scripts
 9. **Google-GenAI Integration** - Proper use of google-genai package for text generation
 10. **LLM Priority Implementation** - Hook systems prioritize Gemini > OpenAI > Anthropic for LLM selection
+=======
+## Expected Deliverable
+
+1. **Functional Gemini TTS Integration** - Users can use Gemini TTS by setting GOOGLE_API_KEY
+2. **Preserved OpenAI Support** - Existing OpenAI TTS functionality remains unchanged
+3. **Updated Priority Logic** - Hook functions correctly prioritize Gemini > OpenAI > pyttsx3
+4. **Comprehensive Tests** - All TTS functionality covered by automated test suite
+>>>>>>> Stashed changes
