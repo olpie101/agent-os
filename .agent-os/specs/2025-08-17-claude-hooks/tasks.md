@@ -72,19 +72,19 @@
   - [x] 7.12 Implement conditional logic for settings update based on --update-settings flag
   - [ ] 7.13 Test installation process with various flag combinations
 
-- [ ] 8. Fix Environment File Loading in Hooks
-  - [ ] 8.1 Update claude-code/hooks/stop.py to check CCAOS_ENV_FILE environment variable
-  - [ ] 8.2 Update claude-code/hooks/notification.py with custom env file support
-  - [ ] 8.3 Update claude-code/hooks/subagent_stop.py with custom env file support
-  - [ ] 8.4 Update claude-code/hooks/user_prompt_submit.py with custom env file support
-  - [ ] 8.5 Update claude-code/hooks/session_start.py with custom env file support
-  - [ ] 8.6 Update claude-code/hooks/pre_compact.py with custom env file support
-  - [ ] 8.7 Update claude-code/hooks/utils/llm/anth.py with custom env file support
-  - [ ] 8.8 Update claude-code/hooks/utils/llm/gemini.py with custom env file support
-  - [ ] 8.9 Update claude-code/hooks/utils/llm/oai.py with custom env file support
-  - [ ] 8.10 Update claude-code/hooks/utils/tts/elevenlabs_tts.py with custom env file support
-  - [ ] 8.11 Update claude-code/hooks/utils/tts/gemini_tts.py with custom env file support
-  - [ ] 8.12 Update claude-code/hooks/utils/tts/openai_tts.py with custom env file support
-  - [ ] 8.13 Update claude-code-sandbox-launcher.sh to set CCAOS_ENV_FILE with default location
-  - [ ] 8.14 Ensure sandbox launcher creates default .env file at ~/.config/.ccaos/.env if not exists
-  - [ ] 8.15 Test environment file loading with various CCAOS_ENV_FILE paths
+- [x] 8. Fix Environment File Loading in Hooks
+  - [x] 8.1 Update claude-code/hooks/stop.py to check CCAOS_ENV_FILE environment variable
+  - [x] 8.2 Update claude-code/hooks/notification.py with custom env file support
+  - [x] 8.3 Update claude-code/hooks/subagent_stop.py with custom env file support
+  - [x] 8.4 Update claude-code/hooks/user_prompt_submit.py with custom env file support
+  - [x] 8.5 Update claude-code/hooks/session_start.py with custom env file support
+  - [x] 8.6 Update claude-code/hooks/pre_compact.py with custom env file support
+  - [x] 8.7 Update claude-code/hooks/utils/llm/anth.py with custom env file support
+  - [x] 8.8 Update claude-code/hooks/utils/llm/gemini.py with custom env file support
+  - [x] 8.9 Update claude-code/hooks/utils/llm/oai.py with custom env file support
+  - [x] 8.10 Update claude-code/hooks/utils/tts/elevenlabs_tts.py with custom env file support
+  - [x] 8.11 Update claude-code/hooks/utils/tts/gemini_tts.py with custom env file support
+  - [x] 8.12 Update claude-code/hooks/utils/tts/openai_tts.py with custom env file support
+  - [x] 8.13 Update claude-code-sandbox-launcher.sh to set CCAOS_ENV_FILE with default location
+  - [x] 8.14 Ensure sandbox launcher creates default .env file at ~/.config/.ccaos/.env if not exists
+  - [x] 8.15 Test environment file loading with various CCAOS_ENV_FILE paths
