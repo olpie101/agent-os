@@ -1,0 +1,12 @@
+instructions/core/peer.md
+instructions/core/refine-spec.md
+instructions/core/git-commit.md
+instructions/meta/unified_state_schema.md
+instructions/meta/multi-branch-execution.md
+instructions/meta/json-creation-standards.md
+instructions/meta/user-interaction-workflows.md
+instructions/meta/git-error-recovery.md
+instructions/meta/git-commit-state-management.md
+instructions/meta/commit-plan-validation.md
+instructions/meta/commit-plan-schema.md
+instructions/meta/nats-kv-operations.md
