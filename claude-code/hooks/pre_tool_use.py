@@ -12,9 +12,18 @@ def is_dangerous_rm_command(command):
     """
     Comprehensive detection of dangerous rm commands.
     Matches various forms of rm -rf and similar destructive patterns.
+    Allows rm -rf for project's tmp directory only.
     """
     # Normalize command by removing extra spaces and converting to lowercase
     normalized = ' '.join(command.lower().split())
+    
+    # Allow rm -rf for project's tmp directory
+    if re.search(r'\brm\s+.*-[a-z]*r[a-z]*f', normalized) or re.search(r'\brm\s+.*-[a-z]*f[a-z]*r', normalized):
+        # Check if targeting project's tmp directory (but not system /tmp)
+        # Matches: tmp/, ./tmp/, tmp/something, ./tmp/something
+        # Does NOT match: /tmp, /tmp/, /var/tmp, etc.
+        if re.search(r'\b(\.\/)?tmp\/\S*', normalized) and not re.search(r'^\/tmp|\/tmp\/|\s\/tmp\/|\s\/tmp\s', normalized):
+            return False  # Allow project tmp cleanup
     
     # Pattern 1: Standard rm -rf variations
     patterns = [
