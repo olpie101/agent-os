@@ -287,6 +287,7 @@
     (subpath (string-append (param "HOME") "/.bundle"))       ;; Bundler cache
     (subpath (string-append (param "HOME") "/.cargo/registry")) ;; Cargo registry
     (subpath (string-append (param "HOME") "/.gem"))          ;; Ruby gems
+    (subpath (string-append (param "HOME") "/Library/Caches/go-build"))
     (subpath (string-append (param "HOME") "/go/pkg/mod/cache"))          ;; Go Cache
     
     ;; Audit log location (project-specific)
