@@ -144,49 +144,68 @@ def announce_completion():
         pass  # Silently fail if TTS doesn't work
 
 
-def log_stop_event(session_id):
-    """Log the stop event."""
-    # Ensure logs directory exists
-    log_dir = Path("logs")
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log_file = log_dir / 'stop.json'
-    
-    # Read existing log data or initialize empty list
-    if log_file.exists():
-        with open(log_file, 'r') as f:
-            try:
-                log_data = json.load(f)
-            except (json.JSONDecodeError, ValueError):
-                log_data = []
-    else:
-        log_data = []
-    
-    # Append new event
-    log_data.append({
-        'session_id': session_id,
-        'timestamp': datetime.now().isoformat()
-    })
-    
-    # Write back to file with formatting
-    with open(log_file, 'w') as f:
-        json.dump(log_data, f, indent=2)
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--announce', action='store_true',
                       help='Announce completion via TTS')
+    parser.add_argument('--chat', action='store_true',
+                      help='Copy transcript to chat.json')
     args = parser.parse_args()
     
     try:
         # Read JSON input from stdin
         input_data = json.loads(sys.stdin.read())
         
-        # Extract session_id
+        # Extract session_id  
         session_id = input_data.get('session_id', 'unknown')
+        stop_hook_active = input_data.get("stop_hook_active", False)
         
-        # Log the stop event
-        log_stop_event(session_id)
+        # Ensure log directory exists
+        log_dir = os.path.join(os.getcwd(), "logs")
+        os.makedirs(log_dir, exist_ok=True)
+        log_path = os.path.join(log_dir, "stop.json")
+        
+        # Read existing log data or initialize empty list
+        if os.path.exists(log_path):
+            with open(log_path, 'r') as f:
+                try:
+                    log_data = json.load(f)
+                except (json.JSONDecodeError, ValueError):
+                    log_data = []
+        else:
+            log_data = []
+        
+        # Append new data (FULL input_data, not just session_id)
+        log_data.append(input_data)
+        
+        # Write back to file with formatting
+        with open(log_path, 'w') as f:
+            json.dump(log_data, f, indent=2)
+        
+        # Handle --chat switch
+        if args.chat and 'transcript_path' in input_data:
+            transcript_path = input_data['transcript_path']
+            if os.path.exists(transcript_path):
+                # Read .jsonl file and convert to JSON array
+                chat_data = []
+                try:
+                    with open(transcript_path, 'r') as f:
+                        for line in f:
+                            line = line.strip()
+                            if line:
+                                try:
+                                    chat_data.append(json.loads(line))
+                                except json.JSONDecodeError:
+                                    pass  # Skip invalid lines
+                    
+                    # Write to logs/chat.json
+                    log_dir = Path("logs")
+                    log_dir.mkdir(parents=True, exist_ok=True)
+                    chat_file = log_dir / 'chat.json'
+                    with open(chat_file, 'w') as f:
+                        json.dump(chat_data, f, indent=2)
+                except Exception:
+                    pass  # Fail silently
         
         # Announce completion if requested
         if args.announce:
