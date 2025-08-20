@@ -101,8 +101,8 @@ install_files() {
     fi
     
     # Copy sandbox profile
-    if [[ -f "claude-code-sandbox.sb" ]]; then
-        cp claude-code-sandbox.sb "$INSTALL_DIR/"
+    if [[ -f "extensions/sandbox/profiles/claude-code-sandbox.sb" ]]; then
+        cp extensions/sandbox/profiles/claude-code-sandbox.sb "$INSTALL_DIR/"
         print_success "Installed sandbox profile"
     else
         print_error "Sandbox profile not found: claude-code-sandbox.sb"
