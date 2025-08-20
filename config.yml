@@ -25,3 +25,17 @@ project_types:
   #   standards: ~/.agent-os/project_types/type_b/standards
 
 default_project_type: default
+
+extensions:
+  sandbox:
+    enabled: true
+    required: true        # Cannot be disabled
+    profile: "claude-code-sandbox.sb"
+  hooks:
+    enabled: true         # Default for projects
+    source_dir: "claude-code/hooks"  # Location of hook files
+    install_dir: "~/.claude/hooks"   # Installation target
+  peer:
+    enabled: true         # Default for projects
+    nats_url: "nats://localhost:4222"
+    project_buckets: true # Per-project KV buckets
