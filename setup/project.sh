@@ -79,8 +79,8 @@ echo ""
 if [ "$NO_BASE" = true ]; then
     IS_FROM_BASE=false
     echo "📦 Installing directly from GitHub (no base installation)"
-    # Set BASE_URL for GitHub downloads
-    BASE_URL="https://raw.githubusercontent.com/buildermethods/agent-os/main"
+    # Set BASE_URL for GitHub downloads (supports override via AGENT_OS_BASE_URL)
+    BASE_URL="${AGENT_OS_BASE_URL:-https://raw.githubusercontent.com/buildermethods/agent-os/main}"
     # Download and source functions when running from GitHub
     TEMP_FUNCTIONS="/tmp/agent-os-functions-$$.sh"
     curl -sSL "${BASE_URL}/setup/functions.sh" -o "$TEMP_FUNCTIONS"
@@ -265,6 +265,24 @@ if [ "$CURSOR" = true ]; then
                 rm "$TEMP_FILE"
             fi
         done
+    fi
+fi
+
+# Call project-extensions.sh if it exists (for project extension installation)
+if [ "$IS_FROM_BASE" = true ]; then
+    if [ -f "$SCRIPT_DIR/project-extensions.sh" ]; then
+        source "$SCRIPT_DIR/project-extensions.sh"
+    fi
+else
+    # When installing from GitHub, download and run project-extensions.sh
+    if command -v curl &> /dev/null; then
+        TEMP_PROJ_EXT="/tmp/agent-os-project-extensions-$$.sh"
+        curl -sSL "${BASE_URL}/setup/project-extensions.sh" -o "$TEMP_PROJ_EXT"
+        if [ -f "$TEMP_PROJ_EXT" ]; then
+            chmod +x "$TEMP_PROJ_EXT"
+            source "$TEMP_PROJ_EXT"
+            rm "$TEMP_PROJ_EXT"
+        fi
     fi
 fi
 

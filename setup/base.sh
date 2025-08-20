@@ -12,8 +12,8 @@ OVERWRITE_CONFIG=false
 CLAUDE_CODE=false
 CURSOR=false
 
-# Base URL for raw GitHub content
-BASE_URL="https://raw.githubusercontent.com/buildermethods/agent-os/main"
+# Base URL for raw GitHub content (supports override via AGENT_OS_BASE_URL)
+BASE_URL="${AGENT_OS_BASE_URL:-https://raw.githubusercontent.com/buildermethods/agent-os/main}"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -104,6 +104,21 @@ download_file "${BASE_URL}/setup/project.sh" \
     "setup/project.sh"
 chmod +x "$INSTALL_DIR/setup/project.sh"
 
+# Download extension scripts
+echo ""
+echo "📥 Downloading extension scripts..."
+download_file "${BASE_URL}/setup/base-extensions.sh" \
+    "$INSTALL_DIR/setup/base-extensions.sh" \
+    "true" \
+    "setup/base-extensions.sh"
+chmod +x "$INSTALL_DIR/setup/base-extensions.sh"
+
+download_file "${BASE_URL}/setup/project-extensions.sh" \
+    "$INSTALL_DIR/setup/project-extensions.sh" \
+    "true" \
+    "setup/project-extensions.sh"
+chmod +x "$INSTALL_DIR/setup/project-extensions.sh"
+
 # Handle Claude Code installation
 if [ "$CLAUDE_CODE" = true ]; then
     echo ""
@@ -135,6 +150,11 @@ if [ "$CURSOR" = true ]; then
         sed -i.bak '/cursor:/,/enabled:/ s/enabled: false/enabled: true/' "$INSTALL_DIR/config.yml" && rm "$INSTALL_DIR/config.yml.bak"
         echo "  ✓ Cursor enabled in configuration"
     fi
+fi
+
+# Call base-extensions.sh if it exists (for extension installation)
+if [ -f "$INSTALL_DIR/setup/base-extensions.sh" ]; then
+    source "$INSTALL_DIR/setup/base-extensions.sh"
 fi
 
 # Success message
