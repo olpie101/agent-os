@@ -1,0 +1,127 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
+
+"""Extension installer script template for Python-based extensions."""
+
+import argparse
+import os
+import shutil
+import sys
+from pathlib import Path
+
+def parse_config_args(unknown_args):
+    """Parse --config-* arguments from unknown args."""
+    config = {}
+    for arg in unknown_args:
+        if arg.startswith('--config-'):
+            key_value = arg[9:]  # Remove '--config-'
+            if '=' in key_value:
+                key, value = key_value.split('=', 1)
+                # Convert boolean strings
+                if value.lower() in ['true', 'false']:
+                    value = value.lower() == 'true'
+                config[key] = value
+    return config
+
+def copy_file_with_overwrite_check(source: Path, dest: Path, overwrite: bool, desc: str) -> bool:
+    """Copy file with overwrite protection following Agent OS pattern."""
+    if dest.exists() and not overwrite:
+        print(f"    ⚠️  {desc} already exists - skipping")
+        return False
+    else:
+        if source.exists():
+            # Create parent directory if needed
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, dest)
+            if dest.exists() and overwrite:
+                print(f"    ✓ {desc} (overwritten)")
+            else:
+                print(f"    ✓ {desc}")
+            return True
+        else:
+            return False
+
+def main():
+    """Main entry point for extension installer."""
+    parser = argparse.ArgumentParser(description='Install extension')
+    
+    # Standard arguments (same as install.sh interface)
+    parser.add_argument('--mode', choices=['global', 'project'], required=True,
+                        help='Installation mode')
+    parser.add_argument('--source-dir', required=True,
+                        help='Extension source directory')
+    parser.add_argument('--extension-name', required=True,
+                        help='Name of the extension')
+    parser.add_argument('--install-dir',
+                        help='Installation directory')
+    parser.add_argument('--project-dir',
+                        help='Project directory (for project mode)')
+    parser.add_argument('--debug', action='store_true',
+                        help='Enable debug output')
+    parser.add_argument('--overwrite', action='store_true',
+                        help='Overwrite existing files during installation')
+    
+    # Parse known args and collect unknown (config) args
+    args, unknown = parser.parse_known_args()
+    
+    # Parse config arguments
+    config = parse_config_args(unknown)
+    
+    # Debug output
+    if args.debug or os.getenv('AGENT_OS_DEBUG', '').lower() == 'true':
+        print(f"[DEBUG] Python installer for {args.extension_name}")
+        print(f"        Mode: {args.mode}")
+        print(f"        Source: {args.source_dir}")
+        if args.install_dir:
+            print(f"        Install to: {args.install_dir}")
+        if config:
+            print(f"        Config: {config}")
+    
+    # ============================================================
+    # EXTENSION-SPECIFIC INSTALLATION LOGIC GOES HERE
+    # 
+    # OVERWRITE PROTECTION:
+    # Use copy_file_with_overwrite_check() for files that should not be
+    # overwritten by default. This respects the --overwrite flag.
+    # For directories or complex operations, check args.overwrite manually.
+    # ============================================================
+    
+    print(f"Installing {args.extension_name} extension...")
+    
+    # Example: Create directories
+    if args.install_dir:
+        install_path = Path(args.install_dir)
+        install_path.mkdir(parents=True, exist_ok=True)
+        print(f"  ✓ Created installation directory: {install_path}")
+    
+    # Example: Copy files with overwrite protection
+    source_path = Path(args.source_dir)
+    # Example: Copy a specific file
+    # source_file = source_path / 'example.txt'
+    # dest_file = install_path / 'example.txt'
+    # copy_file_with_overwrite_check(source_file, dest_file, args.overwrite, 'example.txt')
+    
+    # Example: Set up configuration
+    if 'auto_update' in config and config['auto_update']:
+        print("  ✓ Auto-update enabled")
+    
+    # Example: Mode-specific setup
+    if args.mode == 'project':
+        print(f"  ✓ Setting up for project at: {args.project_dir}")
+        # ... project-specific logic ...
+    else:
+        print("  ✓ Setting up global installation")
+        # ... global-specific logic ...
+    
+    # ============================================================
+    # END OF EXTENSION-SPECIFIC LOGIC
+    # ============================================================
+    
+    print(f"✅ {args.extension_name} extension installed successfully")
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())

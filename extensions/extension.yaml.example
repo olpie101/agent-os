@@ -1,0 +1,87 @@
+# Agent OS Extension Metadata Template
+# This file defines the extension's metadata and configuration schema
+# The install.sh script handles all actual installation logic
+
+# Basic Extension Information
+name: example-extension         # Required: Extension identifier (should match directory name)
+version: 1.0.0                  # Required: Semantic version
+description: |                  # Required: Clear description
+  A brief description of what this extension does and why it's useful.
+author: Your Name              # Optional: Extension author
+license: MIT                   # Optional: License type
+
+# Installation Type
+type: both                      # Required: global, project, or both
+                               # - global: Installs system-wide (e.g., ~/.agent-os)
+                               # - project: Installs per-project (e.g., .agent-os/)
+                               # - both: Can be installed either way
+
+# Configuration Schema
+# Defines what configuration values this extension accepts
+# These values come from the merged configuration hierarchy:
+# base config < project config < environment variables
+config_schema:
+  # Standard configurations all extensions should support
+  enabled:
+    type: boolean
+    default: true
+    required: false
+    description: Whether to enable this extension
+  
+  required:
+    type: boolean
+    default: false
+    required: false
+    description: Whether this extension is required (cannot be disabled)
+  
+  install_dir:
+    type: string
+    default: "${AGENT_OS_HOME}/extensions/${EXTENSION_NAME}"
+    required: false
+    description: Installation directory for the extension
+    # Variables available for expansion:
+    # ${HOME} - User home directory
+    # ${AGENT_OS_HOME} - Base Agent OS directory
+    # ${PROJECT_DIR} - Project directory (for project mode)
+    # ${EXTENSION_NAME} - Name of this extension
+  
+  # Extension-specific configurations
+  custom_option:
+    type: string
+    default: "default_value"
+    required: false
+    description: Example of an extension-specific configuration option
+  
+  log_level:
+    type: string
+    default: "info"
+    required: false
+    enum: ["debug", "info", "warning", "error"]
+    description: Logging verbosity level
+  
+  feature_flags:
+    type: array
+    default: []
+    required: false
+    description: List of feature flags to enable
+    items:
+      type: string
+
+# Dependencies
+dependencies:
+  # System packages required (informational - not auto-installed)
+  system:
+    - uv        # Python package manager
+    - git       # Version control
+  
+  # Python packages (for Python extensions)
+  python:
+    - pyyaml>=6.0
+    - python-dotenv
+  
+  # Other Agent OS extensions this depends on
+  extensions:
+    - name: peer           # Extension name
+      optional: false      # If false, installation fails without it
+    - name: nats
+      optional: true       # If true, extension works without it

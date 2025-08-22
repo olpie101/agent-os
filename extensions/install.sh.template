@@ -1,0 +1,195 @@
+#!/bin/bash
+
+# Standardized Extension Installer Template
+# This script is called by the ExtensionManager with standardized arguments
+# Copy this template to install.sh in your extension directory
+
+set -e  # Exit on error
+
+# Function to show usage
+show_usage() {
+    echo "Usage: $0 --mode=<mode> --source-dir=<path> --install-dir=<path> --config-file=<path> --extension-name=<name> [options]"
+    echo ""
+    echo "Required arguments:"
+    echo "  --mode=<mode>            Installation mode (global|project)"
+    echo "  --source-dir=<path>      Source directory containing extension files"
+    echo "  --install-dir=<path>     Target installation directory"
+    echo "  --config-file=<path>     Path to configuration file"
+    echo "  --extension-name=<name>  Name of the extension"
+    echo ""
+    echo "Optional arguments:"
+    echo "  --project-dir=<path>     Project directory (for project mode)"
+    echo "  --debug                  Enable debug output"
+    echo "  --overwrite              Overwrite existing files"
+    echo "  --help                   Show this help message"
+    exit 1
+}
+
+# Initialize variables
+MODE=""
+SOURCE_DIR=""
+INSTALL_DIR=""
+CONFIG_FILE=""
+EXTENSION_NAME=""
+PROJECT_DIR=""
+DEBUG=false
+OVERWRITE=false
+
+# Parse command line arguments
+for arg in "$@"; do
+    case $arg in
+        --mode=*)
+            MODE="${arg#*=}"
+            ;;
+        --source-dir=*)
+            SOURCE_DIR="${arg#*=}"
+            ;;
+        --install-dir=*)
+            INSTALL_DIR="${arg#*=}"
+            ;;
+        --config-file=*)
+            CONFIG_FILE="${arg#*=}"
+            ;;
+        --extension-name=*)
+            EXTENSION_NAME="${arg#*=}"
+            ;;
+        --project-dir=*)
+            PROJECT_DIR="${arg#*=}"
+            ;;
+        --debug)
+            DEBUG=true
+            ;;
+        --overwrite)
+            OVERWRITE=true
+            ;;
+        --help)
+            show_usage
+            ;;
+        *)
+            echo "Unknown argument: $arg"
+            show_usage
+            ;;
+    esac
+done
+
+# Validate required arguments
+if [ -z "$MODE" ]; then
+    echo "❌ Error: --mode is required"
+    show_usage
+fi
+
+if [ -z "$SOURCE_DIR" ]; then
+    echo "❌ Error: --source-dir is required"
+    show_usage
+fi
+
+if [ -z "$INSTALL_DIR" ]; then
+    echo "❌ Error: --install-dir is required"
+    show_usage
+fi
+
+if [ -z "$CONFIG_FILE" ]; then
+    echo "❌ Error: --config-file is required"
+    show_usage
+fi
+
+if [ -z "$EXTENSION_NAME" ]; then
+    echo "❌ Error: --extension-name is required"
+    show_usage
+fi
+
+# Debug output
+if [ "$DEBUG" = true ]; then
+    echo "🔍 Debug Information:"
+    echo "  Mode: $MODE"
+    echo "  Source: $SOURCE_DIR"
+    echo "  Install: $INSTALL_DIR"
+    echo "  Config: $CONFIG_FILE"
+    echo "  Extension: $EXTENSION_NAME"
+    echo "  Overwrite: $OVERWRITE"
+    if [ -n "$PROJECT_DIR" ]; then
+        echo "  Project: $PROJECT_DIR"
+    fi
+    echo ""
+fi
+
+# Check if extension.yaml exists (for extensions using new architecture)
+EXTENSION_YAML="$SOURCE_DIR/extension.yaml"
+if [ -f "$EXTENSION_YAML" ]; then
+    # Use Python installer for metadata-driven installation
+    echo "📋 Found extension.yaml - using metadata-driven installer"
+    
+    # Check for Python installer
+    PYTHON_INSTALLER="${AGENT_OS_HOME:-$HOME/.agent-os}/setup/scripts/extension_installer.py"
+    if [ ! -f "$PYTHON_INSTALLER" ]; then
+        echo "❌ Error: Python installer not found at $PYTHON_INSTALLER"
+        exit 1
+    fi
+    
+    # Build Python installer command
+    INSTALLER_CMD="$PYTHON_INSTALLER"
+    INSTALLER_CMD="$INSTALLER_CMD --mode $MODE"
+    INSTALLER_CMD="$INSTALLER_CMD --source-dir \"$SOURCE_DIR\""
+    INSTALLER_CMD="$INSTALLER_CMD --install-dir \"$INSTALL_DIR\""
+    INSTALLER_CMD="$INSTALLER_CMD --config-file \"$CONFIG_FILE\""
+    INSTALLER_CMD="$INSTALLER_CMD --extension-name \"$EXTENSION_NAME\""
+    
+    if [ -n "$PROJECT_DIR" ]; then
+        INSTALLER_CMD="$INSTALLER_CMD --project-dir \"$PROJECT_DIR\""
+    fi
+    
+    if [ "$DEBUG" = true ]; then
+        INSTALLER_CMD="$INSTALLER_CMD --debug"
+    fi
+    
+    if [ "$OVERWRITE" = true ]; then
+        INSTALLER_CMD="$INSTALLER_CMD --overwrite"
+    fi
+    
+    # Run Python installer
+    eval "$INSTALLER_CMD"
+    exit $?
+fi
+
+# ============================================================================
+# Legacy installation logic (for extensions without extension.yaml)
+# Replace this section with your extension-specific installation logic
+# ============================================================================
+
+echo "🔧 Installing $EXTENSION_NAME extension (legacy mode)..."
+echo "  📍 Mode: $MODE"
+echo "  📍 Source: $SOURCE_DIR"
+echo "  📍 Target: $INSTALL_DIR"
+
+# Create installation directory
+mkdir -p "$INSTALL_DIR"
+
+# Example: Copy extension files
+echo "  📂 Copying extension files..."
+cp -r "$SOURCE_DIR"/* "$INSTALL_DIR/"
+
+# Example: Set permissions
+echo "  🔒 Setting permissions..."
+if [ -f "$INSTALL_DIR/install.sh" ]; then
+    chmod +x "$INSTALL_DIR/install.sh"
+fi
+
+# Example: Create symlinks (if needed)
+# if [ "$MODE" = "global" ]; then
+#     BIN_DIR="${HOME}/.local/bin"
+#     mkdir -p "$BIN_DIR"
+#     ln -sf "$INSTALL_DIR/command" "$BIN_DIR/command"
+# fi
+
+# Example: Update configuration files (if needed)
+# if [ "$MODE" = "global" ]; then
+#     CONFIG_DIR="${HOME}/.config/extension"
+#     mkdir -p "$CONFIG_DIR"
+#     cp "$SOURCE_DIR/config.example" "$CONFIG_DIR/config"
+# fi
+
+echo "✅ $EXTENSION_NAME extension installed successfully"
+
+# ============================================================================
+# End of legacy installation logic
+# ============================================================================
