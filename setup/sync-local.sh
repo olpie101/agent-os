@@ -215,6 +215,7 @@ sync_file "$REPO_DIR/setup/functions.sh" "$INSTALL_DIR/setup/functions.sh" "func
 sync_file "$REPO_DIR/setup/base-extensions.sh" "$INSTALL_DIR/setup/base-extensions.sh" "base-extensions.sh" true
 sync_file "$REPO_DIR/setup/project.sh" "$INSTALL_DIR/setup/project.sh" "project.sh" true
 sync_file "$REPO_DIR/setup/project-extensions.sh" "$INSTALL_DIR/setup/project-extensions.sh" "project-extensions.sh" true
+sync_file "$REPO_DIR/setup/sync-project-local.sh" "$INSTALL_DIR/setup/sync-project-local.sh" "sync-project-local.sh" true
 
 # Copy Python extension manager and its modules
 mkdir -p "$INSTALL_DIR/setup/scripts"
@@ -239,11 +240,13 @@ fi
 echo ""
 echo "📥 Syncing instructions..."
 echo "  📂 Core instructions:"
-for file in plan-product create-spec create-tasks execute-tasks execute-task analyze-product peer; do
-    if [ -f "$REPO_DIR/instructions/core/${file}.md" ]; then
-        sync_file "$REPO_DIR/instructions/core/${file}.md" \
-                  "$TARGET_DIR/instructions/core/${file}.md" \
-                  "instructions/core/${file}.md" \
+# Copy ALL .md files from instructions/core/
+for file in "$REPO_DIR"/instructions/core/*.md; do
+    if [ -f "$file" ]; then
+        filename=$(basename "$file")
+        sync_file "$file" \
+                  "$TARGET_DIR/instructions/core/$filename" \
+                  "instructions/core/$filename" \
                   "$OVERWRITE_INSTRUCTIONS"
     fi
 done
@@ -280,22 +283,26 @@ done
 
 echo ""
 echo "📥 Syncing commands..."
-for cmd in plan-product create-spec create-tasks execute-tasks analyze-product; do
-    if [ -f "$REPO_DIR/commands/${cmd}.md" ]; then
-        sync_file "$REPO_DIR/commands/${cmd}.md" \
-                  "$TARGET_DIR/commands/${cmd}.md" \
-                  "commands/${cmd}.md" \
+# Copy ALL .md files from commands/
+for file in "$REPO_DIR"/commands/*.md; do
+    if [ -f "$file" ]; then
+        filename=$(basename "$file")
+        sync_file "$file" \
+                  "$TARGET_DIR/commands/$filename" \
+                  "commands/$filename" \
                   true  # Commands are always overwritten
     fi
 done
 
 echo ""
 echo "📥 Syncing Claude Code agents..."
-for agent in context-fetcher date-checker file-creator git-workflow project-manager test-runner process-reflection; do
-    if [ -f "$REPO_DIR/claude-code/agents/${agent}.md" ]; then
-        sync_file "$REPO_DIR/claude-code/agents/${agent}.md" \
-                  "$TARGET_DIR/claude-code/agents/${agent}.md" \
-                  "claude-code/agents/${agent}.md" \
+# Copy ALL .md files from claude-code/agents/
+for file in "$REPO_DIR"/claude-code/agents/*.md; do
+    if [ -f "$file" ]; then
+        filename=$(basename "$file")
+        sync_file "$file" \
+                  "$TARGET_DIR/claude-code/agents/$filename" \
+                  "claude-code/agents/$filename" \
                   true  # Agents are always overwritten
     fi
 done
@@ -308,22 +315,26 @@ if [ "$CLAUDE_CODE" = true ]; then
     mkdir -p "$HOME/.claude/agents"
     
     echo "  📂 Commands:"
-    for cmd in plan-product create-spec create-tasks execute-tasks analyze-product; do
-        if [ -f "$REPO_DIR/commands/${cmd}.md" ]; then
-            sync_file "$REPO_DIR/commands/${cmd}.md" \
-                      "$HOME/.claude/commands/${cmd}.md" \
-                      "~/.claude/commands/${cmd}.md" \
+    # Copy ALL .md files from commands/
+    for file in "$REPO_DIR"/commands/*.md; do
+        if [ -f "$file" ]; then
+            filename=$(basename "$file")
+            sync_file "$file" \
+                      "$HOME/.claude/commands/$filename" \
+                      "~/.claude/commands/$filename" \
                       true  # Commands are always overwritten
         fi
     done
     
     echo ""
     echo "  📂 Agents:"
-    for agent in context-fetcher date-checker file-creator git-workflow project-manager test-runner; do
-        if [ -f "$REPO_DIR/claude-code/agents/${agent}.md" ]; then
-            sync_file "$REPO_DIR/claude-code/agents/${agent}.md" \
-                      "$HOME/.claude/agents/${agent}.md" \
-                      "~/.claude/agents/${agent}.md" \
+    # Copy ALL .md files from claude-code/agents/
+    for file in "$REPO_DIR"/claude-code/agents/*.md; do
+        if [ -f "$file" ]; then
+            filename=$(basename "$file")
+            sync_file "$file" \
+                      "$HOME/.claude/agents/$filename" \
+                      "~/.claude/agents/$filename" \
                       true  # Agents are always overwritten
         fi
     done
@@ -440,7 +451,11 @@ echo "  cat $INSTALL_DIR/extensions/installation.log"
 echo "  ls -la $INSTALL_DIR/extensions/"
 echo "  ls -la ~/.claude-code-sandbox/"
 echo ""
-echo "To test project installation:"
+echo "To install Agent OS in a project (offline):"
+echo "  cd /path/to/your/project"
+echo "  $INSTALL_DIR/setup/sync-project-local.sh --claude-code"
+echo ""
+echo "To test project installation (from GitHub):"
 echo "  mkdir -p ./tmp/test-project"
 echo "  cd ./tmp/test-project"
 echo "  $INSTALL_DIR/setup/project.sh --claude-code"
