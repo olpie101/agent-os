@@ -13,6 +13,7 @@ OVERWRITE_CONFIG=false
 OVERWRITE_EXTENSIONS=false
 CONFIG_FILE=""
 TARGET_DIR=""
+CLAUDE_CODE=false
 
 # Colors for output
 RED='\033[0;31m'
@@ -35,6 +36,7 @@ show_usage() {
     echo "  --overwrite-standards       Overwrite existing standards files"
     echo "  --overwrite-config          Overwrite existing config.yml"
     echo "  --overwrite-extensions      Overwrite existing extension files"
+    echo "  --claude-code               Add Claude Code support"
     echo "  -h, --help                  Show this help message"
     echo ""
     echo "Arguments:"
@@ -45,6 +47,7 @@ show_usage() {
     echo "  $0 ~/my-agent-os                     # Install to custom location"
     echo "  $0 --config config.yml                # Use specific config, default location"
     echo "  $0 ~/test --config test-config.yml   # Custom location and config"
+    echo "  $0 --claude-code                     # Install with Claude Code support"
     echo ""
     exit 0
 }
@@ -71,6 +74,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --overwrite-extensions)
             OVERWRITE_EXTENSIONS=true
+            shift
+            ;;
+        --claude-code|--claude|--claude_code)
+            CLAUDE_CODE=true
             shift
             ;;
         -h|--help)
@@ -293,6 +300,35 @@ for agent in context-fetcher date-checker file-creator git-workflow project-mana
     fi
 done
 
+# Handle Claude Code installation for ~/.claude directory (mimicking project.sh behavior)
+if [ "$CLAUDE_CODE" = true ]; then
+    echo ""
+    echo "📥 Installing Claude Code support to ~/.claude..."
+    mkdir -p "$HOME/.claude/commands"
+    mkdir -p "$HOME/.claude/agents"
+    
+    echo "  📂 Commands:"
+    for cmd in plan-product create-spec create-tasks execute-tasks analyze-product; do
+        if [ -f "$REPO_DIR/commands/${cmd}.md" ]; then
+            sync_file "$REPO_DIR/commands/${cmd}.md" \
+                      "$HOME/.claude/commands/${cmd}.md" \
+                      "~/.claude/commands/${cmd}.md" \
+                      true  # Commands are always overwritten
+        fi
+    done
+    
+    echo ""
+    echo "  📂 Agents:"
+    for agent in context-fetcher date-checker file-creator git-workflow project-manager test-runner; do
+        if [ -f "$REPO_DIR/claude-code/agents/${agent}.md" ]; then
+            sync_file "$REPO_DIR/claude-code/agents/${agent}.md" \
+                      "$HOME/.claude/agents/${agent}.md" \
+                      "~/.claude/agents/${agent}.md" \
+                      true  # Agents are always overwritten
+        fi
+    done
+fi
+
 echo ""
 echo "📥 Syncing extensions..."
 if [ -d "$REPO_DIR/extensions" ]; then
@@ -390,6 +426,14 @@ echo ""
 echo "📍 Installation directory: $INSTALL_DIR"
 echo "📄 Configuration used: ${CONFIG_FILE:-$INSTALL_DIR/config.yml}"
 echo "🔒 Extensions installed based on configuration"
+
+if [ "$CLAUDE_CODE" = true ]; then
+    echo ""
+    echo "📍 Claude Code support installed to:"
+    echo "   ~/.claude/commands/     - Claude Code commands"
+    echo "   ~/.claude/agents/       - Claude Code specialized agents"
+fi
+
 echo ""
 echo "📋 Verification commands:"
 echo "  cat $INSTALL_DIR/extensions/installation.log"
