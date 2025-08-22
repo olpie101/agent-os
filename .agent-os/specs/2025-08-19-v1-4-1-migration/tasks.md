@@ -25,39 +25,52 @@
   - [-] 1.20 Optionally add README.md creation to sandbox install.sh
   - [x] 1.21 Test sandbox extension installation process (Priority 1)
   - [x] 1.22 Verify extension loading framework works
+  - [x] 1.23 Add audit scripts to sandbox extension
+  - [x] 1.24 Update sandbox install.py to copy audit scripts
 
 - [ ] 2. Phase 2: Project Extensions Migration (PR 2 - dependent on PR 1)
-  - [ ] 2.1 Implement full setup/project-extensions.sh (replace stub)
-  - [ ] 2.2 Add minimal call to project-extensions.sh in project.sh
-  - [ ] 2.3 Create hooks extension in extensions/hooks/ (install.sh and config.sh only)
-  - [ ] 2.4 Configure hooks install.sh to reference claude-code/hooks/ source
-  - [ ] 2.5 Configure hooks install.sh to copy to ~/.claude/hooks/
+  - [x] 2.1 Implement full setup/project-extensions.sh (replace stub)
+  - [x] 2.2 Add minimal call to project-extensions.sh in project.sh
+  - [x] 2.3 Create hooks extension in extensions/hooks/ with extension.yaml and install.py
+  - [x] 2.4 Configure hooks install.py to reference claude-code/hooks/ source
+  - [x] 2.5 Configure hooks install.py to copy to ~/.claude/hooks/
+  - [x] 2.14 Copy claude-code/hooks to base installation directory handled by Python manager
+  - [x] 2.15 Update hooks install.py to copy from configurable source directory
+  - [x] 2.16 Add settings.json update logic to hooks install.py using jq
+  - [x] 2.17 Add configuration schema support for environment variable overrides
   - [-] 2.6 Move PEER scripts from scripts/peer/ to extensions/peer/scripts/
   - [-] 2.7 Create PEER extension in extensions/peer/ with install.sh
   - [-] 2.8 Update PEER scripts to reference .agent-os/scripts/peer/
-  - [ ] 2.9 Configure project-extensions.sh to copy extensions and create .agent-os.yaml
-  - [ ] 2.10 Add NATS configuration to .agent-os.yaml template
-  - [ ] 2.11 Test hooks extension installation process (Priority 2)
+  - [x] 2.9 Configure project-extensions.sh to copy extensions and create .agent-os.yaml
+  - [x] 2.10 Add NATS configuration to .agent-os.yaml template
+  - [x] 2.11 Test hooks extension installation process (Priority 2)
   - [-] 2.12 Test PEER extension installation process (Priority 3)
   - [-] 2.13 Update all path references from ~/.agent-os to .agent-os for project-local components
 
-- [ ] 3. Configuration System Integration
+- [x] 3. Configuration System Integration
   - [x] 3.1 Update config.yml template in repo with extension defaults (completed in 1.8)
-  - [ ] 3.2 Implement .agent-os.yaml creation in project-extensions.sh
+  - [x] 3.2 Implement .agent-os.yaml creation in project-extensions.sh
   - [x] 3.3 Add extension enable/disable flags with "required" field for sandbox (completed in 1.8)
-  - [ ] 3.4 Implement configuration hierarchy loading (base → .agent-os.yaml → env vars)
-  - [ ] 3.5 Add NATS configuration with project-specific bucket support
-  - [ ] 3.6 Test configuration override behavior
-  - [ ] 3.7 Validate required extensions cannot be disabled
-  - [ ] 3.8 Test .agent-os.yaml overrides work correctly
+  - [x] 3.4 Implement configuration hierarchy loading (base → .agent-os.yaml → env vars)
+  - [x] 3.5 Add NATS configuration with project-specific bucket support
+  - [x] 3.6 Test configuration override behavior
+  - [x] 3.7 Validate required extensions cannot be disabled
+  - [x] 3.8 Test .agent-os.yaml overrides work correctly
+  - [x] 3.9 Update base-extensions.sh to use get_config_value for each extension
+  - [x] 3.10 Update project-extensions.sh to use get_config_value for each extension
+  - [x] 3.11 Test that disabled extensions are not installed
 
-- [ ] 4. Error Handling & Logging
-  - [ ] 4.1 Create installation.log for extension installation status
-  - [ ] 4.2 Implement extension failure handling (warn for optional, fail for required)
-  - [ ] 4.3 Add retry capability for failed extensions
-  - [ ] 4.4 Create notification system for installation issues
-  - [ ] 4.5 Test error scenarios with partial extension failures
-  - [ ] 4.6 Verify required extension failures stop installation
+- [x] 4. Refactor Extension Scripts to Use Command-Line Arguments
+  - [x] 4.1 Update base-extensions.sh to accept command-line arguments
+  - [x] 4.2 Add argument parsing logic to base-extensions.sh
+  - [x] 4.3 Update project-extensions.sh to accept command-line arguments
+  - [x] 4.4 Add argument parsing logic to project-extensions.sh
+  - [x] 4.5 Update base.sh to call base-extensions.sh with arguments
+  - [x] 4.6 Update project.sh to call project-extensions.sh with arguments
+  - [ ] 4.7 Update sync-local.sh to call Python extension manager directly
+  - [x] 4.8 Test extension scripts work with explicit arguments
+  - [x] 4.9 Remove all $0 and dirname path derivation from extension scripts
+  - [x] 4.10 Verify scripts fail properly when arguments are missing
 
 - [ ] 5. Legacy Script Refactoring & Cleanup
   - [ ] 5.1 Refactor setup.sh to use extension system
@@ -66,7 +79,7 @@
   - [ ] 5.4 Delete original setup scripts after validation
   - [ ] 5.5 Update installation documentation
 
-- [ ] 6. Local Development & Testing
+- [x] 6. Local Development & Testing
   - [x] 6.1 Create setup/sync-local.sh for local development
   - [ ] 6.2 Test BASE_URL override with forked repository
   - [x] 6.3 Test local sync functionality
@@ -74,6 +87,10 @@
   - [x] 6.5 Verify sandbox SANDBOX_INSTALL_DIR override works
   - [x] 6.6 Verify sandbox BIN_DIR override works
   - [x] 6.7 Test symlink creation in ~/.local/bin/
+  - [x] 6.8 Update sync-local.sh to replicate base.sh output (not copy scripts)
+  - [x] 6.9 Add CONFIG_FILE support to sync-local.sh
+  - [x] 6.10 Make sync-local.sh use config-loader.sh for extension decisions
+  - [x] 6.11 Test sync-local.sh with custom config disabling extensions
 
 - [ ] 7. Testing & Validation
   - [ ] 7.1 Test clean base installation with global extensions
@@ -95,3 +112,32 @@
   - [ ] 8.7 Update project README with new installation process
   - [ ] 8.8 Document extension development guidelines with install.sh patterns
   - [ ] 8.9 Verify all functionality works before final merge
+
+- [ ] 9. Error Handling & Logging
+  - [ ] 9.1 Create installation.log for extension installation status
+  - [ ] 9.2 Implement extension failure handling (warn for optional, fail for required)
+  - [ ] 9.3 Add retry capability for failed extensions
+  - [ ] 9.4 Create notification system for installation issues
+  - [ ] 9.5 Test error scenarios with partial extension failures
+  - [ ] 9.6 Verify required extension failures stop installation
+
+- [x] 10. Standardize Extension Installation Architecture
+  - [x] 10.1 Create extension.yaml.example template
+  - [x] 10.2 Create extension_installer.py helper script
+  - [x] 10.3 Create standardized install.py template (Python-based)
+  - [x] 10.4 Migrate sandbox extension to Python architecture
+  - [x] 10.5 Migrate hooks extension to Python architecture
+  - [x] 10.6 Update ExtensionManager to read extension.yaml metadata
+  - [x] 10.7 Update ExtensionManager to pass standardized arguments to install.py
+  - [x] 10.8 Test sandbox extension with new standardized installer
+  - [x] 10.9 Test hooks extension with new standardized installer
+  - [ ] 10.10 Document extension development with new architecture
+
+- [x] 11. Refine Extension Architecture for Config Schema Validation
+  - [x] 11.1 Simplify extension.yaml to only have metadata and config_schema
+  - [x] 11.2 Update extension_installer.py to validate config against schema and call install.py
+  - [x] 11.3 Update extension_manager.py to pass merged config to extension_installer.py
+  - [x] 11.4 Update sandbox extension.yaml to use simplified structure
+  - [x] 11.5 Update hooks extension.yaml to use simplified structure
+  - [x] 11.6 Implement Python-based installation with uv script support
+  - [x] 11.7 Test refined architecture with hooks extension
