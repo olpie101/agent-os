@@ -9,6 +9,7 @@ set -e  # Exit on error
 NO_BASE=false
 OVERWRITE_INSTRUCTIONS=false
 OVERWRITE_STANDARDS=false
+OVERWRITE_EXTENSIONS=false
 CLAUDE_CODE=false
 CURSOR=false
 PROJECT_TYPE=""
@@ -26,6 +27,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --overwrite-standards)
             OVERWRITE_STANDARDS=true
+            shift
+            ;;
+        --overwrite-extensions)
+            OVERWRITE_EXTENSIONS=true
             shift
             ;;
         --claude-code|--claude|--claude_code)
@@ -47,6 +52,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --no-base                   Install from GitHub (not from a base Agent OSinstallation on your system)"
             echo "  --overwrite-instructions    Overwrite existing instruction files"
             echo "  --overwrite-standards       Overwrite existing standards files"
+            echo "  --overwrite-extensions      Overwrite existing extension files"
             echo "  --claude-code               Add Claude Code support"
             echo "  --cursor                    Add Cursor support"
             echo "  --project-type=TYPE         Use specific project type for installation"
@@ -94,6 +100,16 @@ else
     echo "✓ Using Agent OS base installation at $BASE_AGENT_OS"
     # Source shared functions from base installation
     source "$SCRIPT_DIR/functions.sh"
+    
+    # Load configuration hierarchy (if config-loader.sh exists)
+    if [ -f "$SCRIPT_DIR/config-loader.sh" ]; then
+        echo "🔧 Loading configuration hierarchy..."
+        source "$SCRIPT_DIR/config-loader.sh"
+        export AGENT_OS_HOME="$BASE_AGENT_OS"
+        export PROJECT_AGENT_OS_DIR="$PROJECT_DIR/.agent-os"
+        apply_config_hierarchy
+        validate_required_extensions
+    fi
 fi
 
 echo ""
@@ -271,7 +287,20 @@ fi
 # Call project-extensions.sh if it exists (for project extension installation)
 if [ "$IS_FROM_BASE" = true ]; then
     if [ -f "$SCRIPT_DIR/project-extensions.sh" ]; then
-        source "$SCRIPT_DIR/project-extensions.sh"
+        # Build arguments for project-extensions.sh
+        PROJ_EXT_ARGS=(
+            --install-dir="$BASE_AGENT_OS"
+            --project-dir="$CURRENT_DIR"
+            --script-dir="$SCRIPT_DIR"
+            --config-file="$BASE_AGENT_OS/config.yml"
+        )
+        
+        # Add overwrite flag if set
+        if [ "$OVERWRITE_EXTENSIONS" = true ]; then
+            PROJ_EXT_ARGS+=(--overwrite)
+        fi
+        
+        bash "$SCRIPT_DIR/project-extensions.sh" "${PROJ_EXT_ARGS[@]}"
     fi
 else
     # When installing from GitHub, download and run project-extensions.sh
@@ -280,7 +309,28 @@ else
         curl -sSL "${BASE_URL}/setup/project-extensions.sh" -o "$TEMP_PROJ_EXT"
         if [ -f "$TEMP_PROJ_EXT" ]; then
             chmod +x "$TEMP_PROJ_EXT"
-            source "$TEMP_PROJ_EXT"
+            # Create temporary directory for scripts
+            TEMP_SCRIPT_DIR="/tmp/agent-os-setup-$$"
+            mkdir -p "$TEMP_SCRIPT_DIR"
+            # Download necessary scripts for project-extensions
+            curl -sSL "${BASE_URL}/setup/config-loader.sh" -o "$TEMP_SCRIPT_DIR/config-loader.sh"
+            curl -sSL "${BASE_URL}/setup/functions.sh" -o "$TEMP_SCRIPT_DIR/functions.sh"
+            # Build arguments for temporary project-extensions.sh
+            TEMP_PROJ_EXT_ARGS=(
+                --install-dir="$HOME/.agent-os"
+                --project-dir="$CURRENT_DIR"
+                --script-dir="$TEMP_SCRIPT_DIR"
+                --config-file="$HOME/.agent-os/config.yml"
+            )
+            
+            # Add overwrite flag if set
+            if [ "$OVERWRITE_EXTENSIONS" = true ]; then
+                TEMP_PROJ_EXT_ARGS+=(--overwrite)
+            fi
+            
+            # Run with command-line arguments
+            bash "$TEMP_PROJ_EXT" "${TEMP_PROJ_EXT_ARGS[@]}"
+            rm -rf "$TEMP_SCRIPT_DIR"
             rm "$TEMP_PROJ_EXT"
         fi
     fi

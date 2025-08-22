@@ -1,10 +1,16 @@
 #!/bin/bash
 
 # Agent OS Local Development Sync Script
-# This script syncs local repository files to a base installation for testing
-# Usage: ./setup/sync-local.sh [TARGET_DIR]
+# This script replicates the output of base.sh for local testing
+# Usage: ./setup/sync-local.sh [TARGET_DIR] [CONFIG_FILE]
 
 set -e  # Exit on error
+
+# Initialize flags
+OVERWRITE_INSTRUCTIONS=false
+OVERWRITE_STANDARDS=false
+OVERWRITE_CONFIG=false
+OVERWRITE_EXTENSIONS=false
 
 # Colors for output
 RED='\033[0;31m'
@@ -17,6 +23,62 @@ echo "🔄 Agent OS Local Development Sync"
 echo "==================================="
 echo ""
 
+# Function to show usage
+show_usage() {
+    echo "Usage: $0 [OPTIONS] [TARGET_DIR] [CONFIG_FILE]"
+    echo ""
+    echo "Options:"
+    echo "  --overwrite-instructions    Overwrite existing instruction files"
+    echo "  --overwrite-standards       Overwrite existing standards files"
+    echo "  --overwrite-config          Overwrite existing config.yml"
+    echo "  --overwrite-extensions      Overwrite existing extension files"
+    echo "  -h, --help                  Show this help message"
+    echo ""
+    echo "Arguments:"
+    echo "  TARGET_DIR    Target installation directory (default: ~/.agent-os-test)"
+    echo "  CONFIG_FILE   Optional configuration file to use"
+    echo ""
+    exit 0
+}
+
+# Parse command line arguments
+POSITIONAL_ARGS=()
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --overwrite-instructions)
+            OVERWRITE_INSTRUCTIONS=true
+            shift
+            ;;
+        --overwrite-standards)
+            OVERWRITE_STANDARDS=true
+            shift
+            ;;
+        --overwrite-config)
+            OVERWRITE_CONFIG=true
+            shift
+            ;;
+        --overwrite-extensions)
+            OVERWRITE_EXTENSIONS=true
+            shift
+            ;;
+        -h|--help)
+            show_usage
+            ;;
+        -*|--*)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+        *)
+            POSITIONAL_ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+# Restore positional parameters
+set -- "${POSITIONAL_ARGS[@]}"
+
 # Get the repository root (parent of setup directory)
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 echo "📍 Repository directory: $REPO_DIR"
@@ -24,6 +86,16 @@ echo "📍 Repository directory: $REPO_DIR"
 # Get target directory (default to ~/.agent-os-test for safety)
 TARGET_DIR="${1:-$HOME/.agent-os-test}"
 echo "📍 Target directory: $TARGET_DIR"
+
+# Get optional config file
+CONFIG_FILE="${2:-}"
+if [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ]; then
+    echo "📍 Using config file: $CONFIG_FILE"
+    export CONFIG_FILE
+elif [ -n "$CONFIG_FILE" ]; then
+    echo -e "${RED}❌${NC} Config file not found: $CONFIG_FILE"
+    exit 1
+fi
 echo ""
 
 # Confirm with user
@@ -38,58 +110,103 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 echo ""
-echo "📁 Creating target directories..."
-mkdir -p "$TARGET_DIR"
-mkdir -p "$TARGET_DIR/setup"
-mkdir -p "$TARGET_DIR/instructions/core"
-mkdir -p "$TARGET_DIR/instructions/meta"
-mkdir -p "$TARGET_DIR/standards/code-style"
-mkdir -p "$TARGET_DIR/commands"
-mkdir -p "$TARGET_DIR/claude-code/agents"
-mkdir -p "$TARGET_DIR/extensions"
+echo "🔧 Setting up Agent OS installation structure..."
+echo ""
 
-# Function to sync a file
+# Set up the installation directory structure (mimicking base.sh output)
+INSTALL_DIR="$TARGET_DIR"
+mkdir -p "$INSTALL_DIR"
+mkdir -p "$INSTALL_DIR/setup"
+mkdir -p "$INSTALL_DIR/instructions/core"
+mkdir -p "$INSTALL_DIR/instructions/meta"
+mkdir -p "$INSTALL_DIR/standards/code-style"
+mkdir -p "$INSTALL_DIR/commands"
+mkdir -p "$INSTALL_DIR/claude-code/agents"
+mkdir -p "$INSTALL_DIR/extensions"
+
+echo "📁 Creating directory structure..."
+echo -e "  ${GREEN}✓${NC} $INSTALL_DIR"
+
+# Function to sync a file with overwrite protection
 sync_file() {
     local source="$1"
     local dest="$2"
     local desc="$3"
+    local overwrite="${4:-false}"
+    
+    if [ -f "$dest" ] && [ "$overwrite" = false ]; then
+        echo -e "  ${YELLOW}⚠️${NC}  $desc already exists - skipping"
+        return 0
+    fi
     
     if [ -f "$source" ]; then
         cp "$source" "$dest"
-        echo -e "  ${GREEN}✓${NC} $desc"
+        if [ -f "$dest" ] && [ "$overwrite" = true ]; then
+            echo -e "  ${GREEN}✓${NC} $desc (overwritten)"
+        else
+            echo -e "  ${GREEN}✓${NC} $desc"
+        fi
     else
         echo -e "  ${YELLOW}⚠️${NC}  $desc not found at $source"
     fi
 }
 
-# Function to sync a directory
+# Function to sync a directory with overwrite protection
 sync_directory() {
     local source="$1"
     local dest="$2"
     local desc="$3"
+    local overwrite="${4:-false}"
+    
+    if [ -d "$dest" ] && [ "$(ls -A $dest 2>/dev/null)" ] && [ "$overwrite" = false ]; then
+        echo -e "  ${YELLOW}⚠️${NC}  $desc already exists with content - skipping"
+        return 0
+    fi
     
     if [ -d "$source" ]; then
+        if [ -d "$dest" ] && [ "$overwrite" = true ]; then
+            rm -rf "$dest"/*
+        fi
         cp -r "$source"/* "$dest"/ 2>/dev/null || true
-        echo -e "  ${GREEN}✓${NC} $desc"
+        if [ "$overwrite" = true ] && [ -d "$dest" ]; then
+            echo -e "  ${GREEN}✓${NC} $desc (overwritten)"
+        else
+            echo -e "  ${GREEN}✓${NC} $desc"
+        fi
     else
         echo -e "  ${YELLOW}⚠️${NC}  $desc not found at $source"
     fi
 }
 
+# Copy configuration loader and base-extensions.sh for extension installation
 echo ""
-echo "📥 Syncing setup scripts..."
-sync_file "$REPO_DIR/setup/base.sh" "$TARGET_DIR/setup/base.sh" "setup/base.sh"
-sync_file "$REPO_DIR/setup/project.sh" "$TARGET_DIR/setup/project.sh" "setup/project.sh"
-sync_file "$REPO_DIR/setup/functions.sh" "$TARGET_DIR/setup/functions.sh" "setup/functions.sh"
-sync_file "$REPO_DIR/setup/base-extensions.sh" "$TARGET_DIR/setup/base-extensions.sh" "setup/base-extensions.sh"
-sync_file "$REPO_DIR/setup/project-extensions.sh" "$TARGET_DIR/setup/project-extensions.sh" "setup/project-extensions.sh"
+echo "📥 Setting up configuration and extension system..."
+# These system files are always overwritten to ensure consistency
+sync_file "$REPO_DIR/setup/config-loader.sh" "$INSTALL_DIR/setup/config-loader.sh" "config-loader.sh" true
+sync_file "$REPO_DIR/setup/functions.sh" "$INSTALL_DIR/setup/functions.sh" "functions.sh" true
+sync_file "$REPO_DIR/setup/base-extensions.sh" "$INSTALL_DIR/setup/base-extensions.sh" "base-extensions.sh" true
+sync_file "$REPO_DIR/setup/project.sh" "$INSTALL_DIR/setup/project.sh" "project.sh" true
+sync_file "$REPO_DIR/setup/project-extensions.sh" "$INSTALL_DIR/setup/project-extensions.sh" "project-extensions.sh" true
 
-# Make scripts executable
-chmod +x "$TARGET_DIR/setup/"*.sh 2>/dev/null || true
+# Copy Python extension manager and its modules
+mkdir -p "$INSTALL_DIR/setup/scripts"
+# System scripts are always overwritten to ensure consistency
+sync_file "$REPO_DIR/setup/scripts/manage_extensions.py" "$INSTALL_DIR/setup/scripts/manage_extensions.py" "scripts/manage_extensions.py" true
+sync_file "$REPO_DIR/setup/scripts/config_manager.py" "$INSTALL_DIR/setup/scripts/config_manager.py" "scripts/config_manager.py" true
+sync_file "$REPO_DIR/setup/scripts/extension_manager.py" "$INSTALL_DIR/setup/scripts/extension_manager.py" "scripts/extension_manager.py" true
+sync_file "$REPO_DIR/setup/scripts/extension_installer.py" "$INSTALL_DIR/setup/scripts/extension_installer.py" "scripts/extension_installer.py" true
 
+chmod +x "$INSTALL_DIR/setup/"*.sh 2>/dev/null || true
+chmod +x "$INSTALL_DIR/setup/scripts/"*.py 2>/dev/null || true
+
+# Copy configuration file (use provided CONFIG_FILE or default)
 echo ""
-echo "📥 Syncing configuration..."
-sync_file "$REPO_DIR/config.yml" "$TARGET_DIR/config.yml" "config.yml"
+echo "📥 Installing configuration..."
+if [ -n "$CONFIG_FILE" ]; then
+    sync_file "$CONFIG_FILE" "$INSTALL_DIR/config.yml" "config.yml (from $CONFIG_FILE)" "$OVERWRITE_CONFIG"
+else
+    sync_file "$REPO_DIR/config.yml" "$INSTALL_DIR/config.yml" "config.yml" "$OVERWRITE_CONFIG"
+fi
 
 echo ""
 echo "📥 Syncing instructions..."
@@ -98,7 +215,8 @@ for file in plan-product create-spec create-tasks execute-tasks execute-task ana
     if [ -f "$REPO_DIR/instructions/core/${file}.md" ]; then
         sync_file "$REPO_DIR/instructions/core/${file}.md" \
                   "$TARGET_DIR/instructions/core/${file}.md" \
-                  "instructions/core/${file}.md"
+                  "instructions/core/${file}.md" \
+                  "$OVERWRITE_INSTRUCTIONS"
     fi
 done
 
@@ -106,19 +224,21 @@ echo ""
 echo "  📂 Meta instructions:"
 sync_file "$REPO_DIR/instructions/meta/pre-flight.md" \
           "$TARGET_DIR/instructions/meta/pre-flight.md" \
-          "instructions/meta/pre-flight.md"
+          "instructions/meta/pre-flight.md" \
+          "$OVERWRITE_INSTRUCTIONS"
 
 if [ -f "$REPO_DIR/instructions/meta/unified_state_schema.md" ]; then
     sync_file "$REPO_DIR/instructions/meta/unified_state_schema.md" \
               "$TARGET_DIR/instructions/meta/unified_state_schema.md" \
-              "instructions/meta/unified_state_schema.md"
+              "instructions/meta/unified_state_schema.md" \
+              "$OVERWRITE_INSTRUCTIONS"
 fi
 
 echo ""
 echo "📥 Syncing standards..."
-sync_file "$REPO_DIR/standards/tech-stack.md" "$TARGET_DIR/standards/tech-stack.md" "standards/tech-stack.md"
-sync_file "$REPO_DIR/standards/code-style.md" "$TARGET_DIR/standards/code-style.md" "standards/code-style.md"
-sync_file "$REPO_DIR/standards/best-practices.md" "$TARGET_DIR/standards/best-practices.md" "standards/best-practices.md"
+sync_file "$REPO_DIR/standards/tech-stack.md" "$TARGET_DIR/standards/tech-stack.md" "standards/tech-stack.md" "$OVERWRITE_STANDARDS"
+sync_file "$REPO_DIR/standards/code-style.md" "$TARGET_DIR/standards/code-style.md" "standards/code-style.md" "$OVERWRITE_STANDARDS"
+sync_file "$REPO_DIR/standards/best-practices.md" "$TARGET_DIR/standards/best-practices.md" "standards/best-practices.md" "$OVERWRITE_STANDARDS"
 
 echo ""
 echo "  📂 Code style subdirectory:"
@@ -126,7 +246,8 @@ for file in css-style html-style javascript-style; do
     if [ -f "$REPO_DIR/standards/code-style/${file}.md" ]; then
         sync_file "$REPO_DIR/standards/code-style/${file}.md" \
                   "$TARGET_DIR/standards/code-style/${file}.md" \
-                  "standards/code-style/${file}.md"
+                  "standards/code-style/${file}.md" \
+                  "$OVERWRITE_STANDARDS"
     fi
 done
 
@@ -136,7 +257,8 @@ for cmd in plan-product create-spec create-tasks execute-tasks analyze-product; 
     if [ -f "$REPO_DIR/commands/${cmd}.md" ]; then
         sync_file "$REPO_DIR/commands/${cmd}.md" \
                   "$TARGET_DIR/commands/${cmd}.md" \
-                  "commands/${cmd}.md"
+                  "commands/${cmd}.md" \
+                  true  # Commands are always overwritten
     fi
 done
 
@@ -146,90 +268,57 @@ for agent in context-fetcher date-checker file-creator git-workflow project-mana
     if [ -f "$REPO_DIR/claude-code/agents/${agent}.md" ]; then
         sync_file "$REPO_DIR/claude-code/agents/${agent}.md" \
                   "$TARGET_DIR/claude-code/agents/${agent}.md" \
-                  "claude-code/agents/${agent}.md"
+                  "claude-code/agents/${agent}.md" \
+                  true  # Agents are always overwritten
     fi
 done
 
 echo ""
 echo "📥 Syncing extensions..."
 if [ -d "$REPO_DIR/extensions" ]; then
-    # Copy entire extensions directory structure
-    cp -r "$REPO_DIR/extensions" "$TARGET_DIR/"
-    echo -e "  ${GREEN}✓${NC} Extensions directory structure"
-    
-    # List what was copied
-    if [ -d "$TARGET_DIR/extensions/sandbox" ]; then
-        echo -e "  ${GREEN}✓${NC} Sandbox extension"
-    fi
-    if [ -d "$TARGET_DIR/extensions/hooks" ]; then
-        echo -e "  ${GREEN}✓${NC} Hooks extension (stub)"
-    fi
-    if [ -d "$TARGET_DIR/extensions/peer" ]; then
-        echo -e "  ${GREEN}✓${NC} PEER extension (stub)"
+    if [ -d "$INSTALL_DIR/extensions" ] && [ "$OVERWRITE_EXTENSIONS" = false ]; then
+        echo -e "  ${YELLOW}⚠️${NC}  Extensions directory already exists - skipping"
+    else
+        # Copy entire extensions directory structure
+        if [ -d "$INSTALL_DIR/extensions" ] && [ "$OVERWRITE_EXTENSIONS" = true ]; then
+            rm -rf "$INSTALL_DIR/extensions"
+        fi
+        cp -r "$REPO_DIR/extensions" "$INSTALL_DIR/"
+        if [ "$OVERWRITE_EXTENSIONS" = true ] && [ -d "$INSTALL_DIR/extensions" ]; then
+            echo -e "  ${GREEN}✓${NC} Extensions directory structure (overwritten)"
+        else
+            echo -e "  ${GREEN}✓${NC} Extensions directory structure"
+        fi
+        
+        # List what was copied
+        if [ -d "$INSTALL_DIR/extensions/sandbox" ]; then
+            echo -e "  ${GREEN}✓${NC} Sandbox extension available"
+        fi
+        if [ -d "$INSTALL_DIR/extensions/hooks" ]; then
+            echo -e "  ${GREEN}✓${NC} Hooks extension available"
+        fi
+        if [ -d "$INSTALL_DIR/extensions/peer" ]; then
+            echo -e "  ${GREEN}✓${NC} PEER extension available"
+        fi
     fi
 else
     echo -e "  ${YELLOW}⚠️${NC}  Extensions directory not found"
 fi
 
-echo ""
-echo "🔧 Setting up Agent OS installation structure..."
-echo ""
-
-# Set up the installation directory structure (mimicking base.sh)
-INSTALL_DIR="$TARGET_DIR/.agent-os"
-mkdir -p "$INSTALL_DIR"
-mkdir -p "$INSTALL_DIR/setup"
-
-echo "📁 Creating .agent-os directory structure..."
-echo -e "  ${GREEN}✓${NC} $INSTALL_DIR"
-
-# Copy setup scripts to the installation directory (mimicking base.sh download behavior)
-echo ""
-echo "📥 Setting up installation scripts..."
-cp "$TARGET_DIR/setup/functions.sh" "$INSTALL_DIR/setup/functions.sh"
-cp "$TARGET_DIR/setup/base-extensions.sh" "$INSTALL_DIR/setup/base-extensions.sh"
-cp "$TARGET_DIR/setup/project-extensions.sh" "$INSTALL_DIR/setup/project-extensions.sh"
-chmod +x "$INSTALL_DIR/setup/"*.sh
-
-echo -e "  ${GREEN}✓${NC} Installation scripts ready"
-
-# Source the functions (mimicking base.sh)
+# Source the functions
 source "$INSTALL_DIR/setup/functions.sh"
 
-echo ""
-echo "📥 Installing Agent OS files..."
-
-# Copy core files to installation directory (mimicking base.sh)
-echo ""
-echo "  📂 Instructions:"
-mkdir -p "$INSTALL_DIR/instructions/core"
-mkdir -p "$INSTALL_DIR/instructions/meta"
-cp -r "$TARGET_DIR/instructions/core"/* "$INSTALL_DIR/instructions/core/" 2>/dev/null || true
-cp -r "$TARGET_DIR/instructions/meta"/* "$INSTALL_DIR/instructions/meta/" 2>/dev/null || true
-echo -e "    ${GREEN}✓${NC} Core and meta instructions"
-
-echo ""
-echo "  📂 Standards:"
-mkdir -p "$INSTALL_DIR/standards/code-style"
-cp -r "$TARGET_DIR/standards"/* "$INSTALL_DIR/standards/" 2>/dev/null || true
-echo -e "    ${GREEN}✓${NC} Development standards"
-
-echo ""
-echo "  📂 Commands:"
-mkdir -p "$INSTALL_DIR/commands"
-cp -r "$TARGET_DIR/commands"/* "$INSTALL_DIR/commands/" 2>/dev/null || true
-echo -e "    ${GREEN}✓${NC} Command templates"
-
-echo ""
-echo "  📂 Configuration:"
-cp "$TARGET_DIR/config.yml" "$INSTALL_DIR/config.yml"
-echo -e "    ${GREEN}✓${NC} Base configuration"
-
-echo ""
-echo "  📂 Claude Code Agents:"
-mkdir -p "$INSTALL_DIR/claude-code/agents"
-cp -r "$TARGET_DIR/claude-code/agents"/* "$INSTALL_DIR/claude-code/agents/" 2>/dev/null || true
-echo -e "    ${GREEN}✓${NC} Agent templates"
+# Source configuration loader to use config system
+if [ -f "$INSTALL_DIR/setup/config-loader.sh" ]; then
+    echo ""
+    echo "🔧 Loading configuration system..."
+    source "$INSTALL_DIR/setup/config-loader.sh"
+    export AGENT_OS_HOME="$INSTALL_DIR"
+    apply_config_hierarchy
+else
+    echo ""
+    echo "  ⚠️  Configuration loader not found, using defaults..."
+fi
 
 # Set environment variables that base-extensions.sh expects
 export INSTALL_DIR="$INSTALL_DIR"
@@ -237,26 +326,34 @@ export BASE_DIR="$REPO_DIR"
 export SCRIPT_DIR="$INSTALL_DIR/setup"
 
 echo ""
-echo "🔧 Running extension installation (base-extensions.sh)..."
+echo "🔧 Running extension installation..."
 echo ""
 
-# Call base-extensions.sh (mimicking base.sh)
-INSTALL_DIR_ABS="$(cd "$INSTALL_DIR" && pwd)"
-BASE_EXTENSIONS_SCRIPT="$INSTALL_DIR_ABS/setup/base-extensions.sh"
-TARGET_DIR_ABS="$(cd "$TARGET_DIR" && pwd)"
+# Run base-extensions.sh to install extensions based on configuration
+BASE_EXTENSIONS_SCRIPT="$INSTALL_DIR/setup/base-extensions.sh"
 
 if [ -f "$BASE_EXTENSIONS_SCRIPT" ]; then
+    echo "<<<<< BASE EXTENSIONS SCRIPT >>>>>"
     echo "  📍 Running: $BASE_EXTENSIONS_SCRIPT"
-    echo "  📁 Context: $TARGET_DIR_ABS"
     
-    # Change to the target directory context and source the script
-    (
-        cd "$TARGET_DIR_ABS"
-        export INSTALL_DIR="$INSTALL_DIR_ABS"
-        export BASE_DIR="$REPO_DIR"
-        export SCRIPT_DIR="$INSTALL_DIR_ABS/setup"
-        source "$BASE_EXTENSIONS_SCRIPT"
+    # Determine config file to use
+    CONFIG_TO_USE="${CONFIG_FILE:-$INSTALL_DIR/config.yml}"
+    
+    # Run the extensions installer with command-line arguments
+    # Add overwrite flag if set
+    EXTENSION_ARGS=(
+        --install-dir="$INSTALL_DIR"
+        --base-dir="$REPO_DIR"
+        --script-dir="$INSTALL_DIR/setup"
+        --config-file="$CONFIG_TO_USE"
     )
+    
+    if [ "$OVERWRITE_EXTENSIONS" = true ]; then
+        EXTENSION_ARGS+=(--overwrite)
+    fi
+    
+    bash "$BASE_EXTENSIONS_SCRIPT" "${EXTENSION_ARGS[@]}"
+    
     local_exit_code=$?
     if [ $local_exit_code -ne 0 ]; then
         echo -e "  ${RED}❌${NC} base-extensions.sh failed with exit code $local_exit_code"
@@ -270,16 +367,25 @@ fi
 echo ""
 echo "✅ Local Agent OS installation completed!"
 echo ""
-echo "📍 Files installed to: $INSTALL_DIR"
-echo "🔒 Extensions tested with: base-extensions.sh"
+echo "📍 Installation directory: $INSTALL_DIR"
+echo "📄 Configuration used: ${CONFIG_FILE:-$INSTALL_DIR/config.yml}"
+echo "🔒 Extensions installed based on configuration"
 echo ""
 echo "📋 Verification commands:"
+echo "  cat $INSTALL_DIR/extensions/installation.log"
 echo "  ls -la $INSTALL_DIR/extensions/"
 echo "  ls -la ~/.claude-code-sandbox/"
-echo "  cat $INSTALL_DIR/extensions/installation.log"
 echo ""
 echo "To test project installation:"
-echo "  cd $TARGET_DIR && ./setup/project.sh --claude-code"
+echo "  mkdir -p ./tmp/test-project"
+echo "  cd ./tmp/test-project"
+echo "  $INSTALL_DIR/setup/project.sh --claude-code"
+echo ""
+echo "To test with disabled extensions:"
+echo "  # Create custom config with extensions disabled"
+echo "  cp $INSTALL_DIR/config.yml ./tmp/test-config.yml"
+echo "  # Edit test-config.yml to disable extensions"
+echo "  ./setup/sync-local.sh ./tmp/agent-os-test2 ./tmp/test-config.yml"
 echo ""
 echo -e "${YELLOW}Note: This is for development only. Always test with actual${NC}"
 echo -e "${YELLOW}GitHub downloads before creating PRs.${NC}"

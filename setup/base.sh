@@ -81,6 +81,14 @@ echo "📥 Downloading setup functions..."
 curl -sSL "${BASE_URL}/setup/functions.sh" -o "$INSTALL_DIR/setup/functions.sh"
 source "$INSTALL_DIR/setup/functions.sh"
 
+# Load configuration hierarchy (if config-loader.sh exists)
+if [ -f "$INSTALL_DIR/setup/config-loader.sh" ]; then
+    echo "🔧 Loading configuration hierarchy..."
+    source "$INSTALL_DIR/setup/config-loader.sh"
+    export AGENT_OS_HOME="$INSTALL_DIR"
+    apply_config_hierarchy
+fi
+
 echo ""
 echo "📦 Installing the latest version of Agent OS from the Agent OS GitHub repository..."
 
@@ -119,6 +127,27 @@ download_file "${BASE_URL}/setup/project-extensions.sh" \
     "setup/project-extensions.sh"
 chmod +x "$INSTALL_DIR/setup/project-extensions.sh"
 
+# Download Python extension manager and its modules
+echo "📥 Downloading Python extension manager..."
+mkdir -p "$INSTALL_DIR/setup/scripts"
+download_file "${BASE_URL}/setup/scripts/manage_extensions.py" \
+    "$INSTALL_DIR/setup/scripts/manage_extensions.py" \
+    "true" \
+    "setup/scripts/manage_extensions.py"
+download_file "${BASE_URL}/setup/scripts/config_manager.py" \
+    "$INSTALL_DIR/setup/scripts/config_manager.py" \
+    "true" \
+    "setup/scripts/config_manager.py"
+download_file "${BASE_URL}/setup/scripts/extension_manager.py" \
+    "$INSTALL_DIR/setup/scripts/extension_manager.py" \
+    "true" \
+    "setup/scripts/extension_manager.py"
+download_file "${BASE_URL}/setup/scripts/extension_installer.py" \
+    "$INSTALL_DIR/setup/scripts/extension_installer.py" \
+    "true" \
+    "setup/scripts/extension_installer.py"
+chmod +x "$INSTALL_DIR/setup/scripts/"*.py
+
 # Handle Claude Code installation
 if [ "$CLAUDE_CODE" = true ]; then
     echo ""
@@ -154,7 +183,14 @@ fi
 
 # Call base-extensions.sh if it exists (for extension installation)
 if [ -f "$INSTALL_DIR/setup/base-extensions.sh" ]; then
-    source "$INSTALL_DIR/setup/base-extensions.sh"
+    # For base.sh, the base-dir is the installation directory itself
+    # since we downloaded files from GitHub
+    echo "[DEBUG] base.sh: AGENT_OS_HOME before calling base-extensions.sh: '${AGENT_OS_HOME}'"
+    bash "$INSTALL_DIR/setup/base-extensions.sh" \
+        --install-dir="$INSTALL_DIR" \
+        --base-dir="$INSTALL_DIR" \
+        --script-dir="$INSTALL_DIR/setup" \
+        --config-file="$INSTALL_DIR/config.yml"
 fi
 
 # Success message

@@ -46,34 +46,36 @@ run_test_script() {
     echo ""
 }
 
+cd ./extensions/sandbox/tests
+
 # Run Task 2 tests: Launcher script
-if [ -f "tests/test-launcher.sh" ]; then
-    run_test_script "tests/test-launcher.sh" "Task 2 - Launcher Script"
+if [ -f "./test-launcher.sh" ]; then
+    run_test_script "./test-launcher.sh" "Task 2 - Launcher Script"
 else
     echo -e "${YELLOW}Skipping Task 2 tests - test-launcher.sh not found${NC}"
     echo ""
 fi
 
 # Run Task 3 tests: Environment variables
-run_test_script "tests/test-env-vars.sh" "Task 3 - Environment Variables"
+run_test_script "./test-env-vars.sh" "Task 3 - Environment Variables"
 
 # Run Task 4 tests: Read restrictions
-run_test_script "tests/test-read-restrictions.sh" "Task 4 - Read Restrictions"
+run_test_script "./test-read-restrictions.sh" "Task 4 - Read Restrictions"
 
 # Run Task 5 tests: Write restrictions
-run_test_script "tests/test-write-restrictions.sh" "Task 5 - Write Restrictions"
+run_test_script "./test-write-restrictions.sh" "Task 5 - Write Restrictions"
 
 # Run Task 6 tests: Deny rules for sensitive directories
-run_test_script "tests/test-sandbox-deny-rules.sh" "Task 6 - Deny Rules"
+run_test_script "./test-sandbox-deny-rules.sh" "Task 6 - Deny Rules"
 
 # Run Task 7 tests: Executable permissions
-run_test_script "tests/test-executable-permissions.sh" "Task 7 - Executable Permissions"
+run_test_script "./test-executable-permissions.sh" "Task 7 - Executable Permissions"
 
 # Run Task 8 tests: Network configuration
-run_test_script "tests/test-network-permissions.sh" "Task 8 - Network Configuration"
+run_test_script "./test-network-permissions.sh" "Task 8 - Network Configuration"
 
 # Run Task 9 tests: Audit logging
-run_test_script "tests/test-audit-logging.sh" "Task 9 - Audit Logging"
+run_test_script "./test-audit-logging.sh" "Task 9 - Audit Logging"
 
 # Final summary
 echo -e "${BLUE}=========================================${NC}"
