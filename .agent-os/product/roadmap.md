@@ -13,6 +13,18 @@ The following foundational features have been implemented and are operational:
 - [x] **Instruction-Based Architecture** - Markdown specifications for agents and workflows
 - [x] **Claude Code Integration** - Native support for Claude Code sandbox environment
 - [x] **Basic Error Recovery** - Graceful failure handling with state preservation
+- [x] **Improved Installation System** - Separate base and project installations with config.yml
+- [x] **Project Types Support** - Customizable standards per project type
+- [x] **Recap System** - Automatic generation of feature implementation summaries
+- [x] **Project Manager Agent** - Dedicated agent for task completion and status tracking
+- [x] **Multi-Commit Planner** - Agent for organizing changes into logical commits
+- [x] **Meta Agent** - Agent for creating new specialized agents
+- [x] **Git Commit Integration** - Structured commit planning with MCP validation
+- [x] **Refine-Spec Instruction** - Iterative spec improvement based on review feedback
+- [x] **Complete-Tasks Process** - Standardized task completion workflow
+- [x] **Offline Installation Support** - sync-project-local.sh for disconnected environments
+- [x] **Enhanced Test Integration** - test-runner agent for automated testing
+- [x] **v1.4.1 Migration & Extension Modularization** - Merged upstream v1.4.1 with modular extension architecture `XL`
 
 ## Phase 1: Hooks Integration and Enhancement
 
