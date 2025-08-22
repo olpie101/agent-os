@@ -1,0 +1,59 @@
+# Hooks Extension Metadata
+name: hooks
+version: 1.0.0
+description: Claude Code hooks for workflow customization and project integration
+author: Agent OS Team
+license: MIT
+
+# Extension type - hooks can be both global and project
+type: both
+
+# Configuration schema
+# Defines what configuration values this extension accepts
+config_schema:
+  enabled:
+    type: boolean
+    default: true
+    required: false
+    description: Whether the hooks extension is enabled
+  
+  required:
+    type: boolean
+    default: false
+    required: false
+    description: Whether hooks are required
+  
+  install_dir:
+    type: string
+    default: "${HOME}/.claude"
+    required: false
+    description: Installation directory for Claude Code (parent of hooks)
+  
+  source_dir:
+    type: string
+    default: "${PROJECT_DIR}/claude-code/hooks"
+    required: false
+    description: Source directory for hook files (for project mode)
+  
+  auto_update:
+    type: boolean
+    default: false
+    required: false
+    description: Automatically update hooks when source files change
+  
+  update_settings:
+    type: boolean
+    default: true
+    required: false
+    description: Update ~/.claude/settings.json with hooks configuration
+
+# Dependencies
+dependencies:
+  # Python packages required by hooks
+  python:
+    - python-dotenv
+    - pyyaml
+  
+  # System requirements
+  system:
+    - uv  # Python package manager
