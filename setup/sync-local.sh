@@ -2,7 +2,7 @@
 
 # Agent OS Local Development Sync Script
 # This script replicates the output of base.sh for local testing
-# Usage: ./setup/sync-local.sh [TARGET_DIR] [CONFIG_FILE]
+# Usage: ./setup/sync-local.sh [TARGET_DIR] --config CONFIG_FILE
 
 set -e  # Exit on error
 
@@ -11,6 +11,8 @@ OVERWRITE_INSTRUCTIONS=false
 OVERWRITE_STANDARDS=false
 OVERWRITE_CONFIG=false
 OVERWRITE_EXTENSIONS=false
+CONFIG_FILE=""
+TARGET_DIR=""
 
 # Colors for output
 RED='\033[0;31m'
@@ -25,9 +27,10 @@ echo ""
 
 # Function to show usage
 show_usage() {
-    echo "Usage: $0 [OPTIONS] [TARGET_DIR] [CONFIG_FILE]"
+    echo "Usage: $0 [OPTIONS] [TARGET_DIR]"
     echo ""
     echo "Options:"
+    echo "  --config FILE               Configuration file to use (e.g., config.yml)"
     echo "  --overwrite-instructions    Overwrite existing instruction files"
     echo "  --overwrite-standards       Overwrite existing standards files"
     echo "  --overwrite-config          Overwrite existing config.yml"
@@ -35,8 +38,13 @@ show_usage() {
     echo "  -h, --help                  Show this help message"
     echo ""
     echo "Arguments:"
-    echo "  TARGET_DIR    Target installation directory (default: ~/.agent-os-test)"
-    echo "  CONFIG_FILE   Optional configuration file to use"
+    echo "  TARGET_DIR    Target installation directory (default: ~/.agent-os)"
+    echo ""
+    echo "Examples:"
+    echo "  $0                                   # Install to default location"
+    echo "  $0 ~/my-agent-os                     # Install to custom location"
+    echo "  $0 --config config.yml                # Use specific config, default location"
+    echo "  $0 ~/test --config test-config.yml   # Custom location and config"
     echo ""
     exit 0
 }
@@ -45,6 +53,10 @@ show_usage() {
 POSITIONAL_ARGS=()
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --config)
+            CONFIG_FILE="$2"
+            shift 2
+            ;;
         --overwrite-instructions)
             OVERWRITE_INSTRUCTIONS=true
             shift
@@ -83,12 +95,21 @@ set -- "${POSITIONAL_ARGS[@]}"
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 echo "📍 Repository directory: $REPO_DIR"
 
-# Get target directory (default to ~/.agent-os-test for safety)
-TARGET_DIR="${1:-$HOME/.agent-os-test}"
+# Get target directory - now only first positional argument
+# Default to ~/.agent-os (standard location) instead of test location
+TARGET_DIR="${1:-$HOME/.agent-os}"
+
+# Support backward compatibility: if second positional arg looks like a config file, use it
+if [ -n "${2:-}" ] && [[ "${2}" == *.yml || "${2}" == *.yaml ]]; then
+    if [ -z "$CONFIG_FILE" ]; then
+        CONFIG_FILE="$2"
+        echo -e "${YELLOW}Note: Using legacy syntax. Consider using --config flag instead.${NC}"
+    fi
+fi
+
 echo "📍 Target directory: $TARGET_DIR"
 
-# Get optional config file
-CONFIG_FILE="${2:-}"
+# Validate config file if provided
 if [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ]; then
     echo "📍 Using config file: $CONFIG_FILE"
     export CONFIG_FILE
