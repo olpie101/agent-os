@@ -15,7 +15,7 @@ Mandatory standards for all NATS KV operations in PEER pattern execution. These 
 **IMPORTANT**: This standard applies to all PEER agents and automated processes. Manual recovery operations by human operators are exempt from these restrictions.
 
 <pre_flight_check>
-  EXECUTE: @~/.agent-os/instructions/meta/pre-flight.md
+  EXECUTE: @.agent-os/instructions/meta/pre-flight.md
 </pre_flight_check>
 
 ## Critical Background

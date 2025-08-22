@@ -13,8 +13,8 @@ encoding: UTF-8
 Declarative XML workflows for handling git operation errors during complex multi-branch commit execution. These patterns provide systematic error detection, classification, recovery strategies, and user guidance for both transient and permanent error conditions.
 
 <pre_flight_check>
-  EXECUTE: @~/.agent-os/instructions/meta/pre-flight.md
-  ALSO_EXECUTE: @~/.agent-os/instructions/meta/git-commit-state-management.md
+  EXECUTE: @.agent-os/instructions/meta/pre-flight.md
+  ALSO_EXECUTE: @.agent-os/instructions/meta/git-commit-state-management.md
 </pre_flight_check>
 
 ## Error Classification and Detection

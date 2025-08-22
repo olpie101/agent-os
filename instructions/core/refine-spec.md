@@ -13,7 +13,7 @@ encoding: UTF-8
 Refine existing spec documentation based on user requirements, review recommendations, or implementation discoveries while preserving completed work.
 
 <pre_flight_check>
-  EXECUTE: @~/.agent-os/instructions/meta/pre-flight.md
+  EXECUTE: @.agent-os/instructions/meta/pre-flight.md
 </pre_flight_check>
 
 <process_flow>

@@ -13,7 +13,7 @@ encoding: UTF-8
 Declarative XML workflows for validating commit plan files in both JSON and Markdown formats. These patterns ensure plan integrity, format compatibility, and structural correctness before execution begins.
 
 <pre_flight_check>
-  EXECUTE: @~/.agent-os/instructions/meta/pre-flight.md
+  EXECUTE: @.agent-os/instructions/meta/pre-flight.md
 </pre_flight_check>
 
 ## Plan File Location and Format Detection
@@ -145,7 +145,7 @@ Declarative XML workflows for validating commit plan files in both JSON and Mark
         
         IF missing required fields:
           ERROR: "Missing required fields: [list_missing_fields]"
-          REFERENCE: "@~/.agent-os/instructions/meta/commit-plan-schema.md"
+          REFERENCE: "@.agent-os/instructions/meta/commit-plan-schema.md"
           STOP: validation workflow
       </required_root_fields>
       
@@ -458,7 +458,7 @@ Declarative XML workflows for validating commit plan files in both JSON and Mark
     <missing_required_fields>
       MESSAGE: "Plan file missing required fields: [field_list]"
       ACTIONS:
-        REFERENCE: "@~/.agent-os/instructions/meta/commit-plan-schema.md"
+        REFERENCE: "@.agent-os/instructions/meta/commit-plan-schema.md"
         PROVIDE: example of complete plan structure
         LIST: specific fields that need to be added
     </missing_required_fields>
@@ -508,7 +508,7 @@ Declarative XML workflows for validating commit plan files in both JSON and Mark
   </with_git_commit_instruction>
   
   <with_commit_plan_schema>
-    REFERENCES: @~/.agent-os/instructions/meta/commit-plan-schema.md
+    REFERENCES: @.agent-os/instructions/meta/commit-plan-schema.md
     VALIDATES: against official schema requirements
     MAINTAINS: compatibility with schema evolution
   </with_commit_plan_schema>

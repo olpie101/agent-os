@@ -13,7 +13,7 @@ encoding: UTF-8
 Declarative XML workflows for managing user decision points during complex git commit operations. These patterns handle dependency conflicts, branch strategy decisions, and conflict resolution guidance with clear visual presentations and structured choice handling.
 
 <pre_flight_check>
-  EXECUTE: @~/.agent-os/instructions/meta/pre-flight.md
+  EXECUTE: @.agent-os/instructions/meta/pre-flight.md
 </pre_flight_check>
 
 ## Multi-Branch File Dependency Decisions
