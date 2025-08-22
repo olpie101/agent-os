@@ -1,0 +1,48 @@
+# Sandbox Extension Metadata
+name: sandbox
+version: 1.0.0
+description: Claude Code sandbox security profile for secure code execution
+author: Agent OS Team
+license: MIT
+
+# Extension type - sandbox is a global extension
+type: global
+
+# Configuration schema
+# Defines what configuration values this extension accepts
+config_schema:
+  enabled:
+    type: boolean
+    default: true
+    required: false
+    description: Whether the sandbox extension is enabled
+  
+  required:
+    type: boolean
+    default: true
+    required: false
+    description: Sandbox is a required extension for security
+  
+  install_dir:
+    type: string
+    default: "${HOME}/.claude-code-sandbox"
+    required: false
+    description: Installation directory for sandbox files
+  
+  bin_dir:
+    type: string
+    default: "${HOME}/.local/bin"
+    required: false
+    description: Directory for command symlinks
+  
+  symlink:
+    type: boolean
+    default: false
+    required: false
+    description: Whether to create command symlink in bin directory
+
+# Dependencies
+dependencies:
+  # System packages required (informational - not auto-installed)
+  system:
+    - sandbox-exec  # macOS sandboxing tool

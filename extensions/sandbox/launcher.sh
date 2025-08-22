@@ -32,6 +32,7 @@ ENVIRONMENT VARIABLES:
     SANDBOX_VERBOSE    Enable verbose logging (true/false, default: false)
     EXTRA_EXEC_PATH    Additional executable path (default: none)
     CCAOS_ENV_FILE     Path to .env file for hooks (default: \$HOME/.config/ccaos/.env)
+    SANDBOX_PROFILE    Path to sandbox profile (default: same directory as launcher)
     
 EXAMPLES:
     # Run Claude Code with defaults
@@ -167,8 +168,8 @@ else
     echo "Would execute: mkdir -p $AUDIT_LOG_PATH"
 fi
 
-# Find the sandbox profile - always use absolute path from script directory
-SANDBOX_PROFILE="${SCRIPT_DIR}/claude-code-sandbox.sb"
+# Find the sandbox profile - use environment variable or default to script directory
+SANDBOX_PROFILE="${SANDBOX_PROFILE:-${SCRIPT_DIR}/claude-code-sandbox.sb}"
 
 # Check if sandbox profile exists
 if [ ! -f "$SANDBOX_PROFILE" ]; then
