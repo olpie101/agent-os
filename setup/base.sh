@@ -13,7 +13,7 @@ CLAUDE_CODE=false
 CURSOR=false
 
 # Base URL for raw GitHub content (supports override via AGENT_OS_BASE_URL)
-BASE_URL="${AGENT_OS_BASE_URL:-https://raw.githubusercontent.com/buildermethods/agent-os/main}"
+BASE_URL="${AGENT_OS_BASE_URL:-https://raw.githubusercontent.com/olpie101/agent-os/main}"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -127,6 +127,12 @@ download_file "${BASE_URL}/setup/project-extensions.sh" \
     "setup/project-extensions.sh"
 chmod +x "$INSTALL_DIR/setup/project-extensions.sh"
 
+download_file "${BASE_URL}/setup/sync-project-local.sh" \
+    "$INSTALL_DIR/setup/sync-project-local.sh" \
+    "true" \
+    "setup/sync-project-local.sh"
+chmod +x "$INSTALL_DIR/setup/sync-project-local.sh"
+
 # Download Python extension manager and its modules
 echo "📥 Downloading Python extension manager..."
 mkdir -p "$INSTALL_DIR/setup/scripts"
@@ -214,7 +220,8 @@ echo "   $INSTALL_DIR/instructions/      - Agent OS instructions"
 echo "   $INSTALL_DIR/standards/         - Development standards"
 echo "   $INSTALL_DIR/commands/          - Command templates"
 echo "   $INSTALL_DIR/config.yml         - Configuration"
-echo "   $INSTALL_DIR/setup/project.sh   - Project installation script"
+echo "   $INSTALL_DIR/setup/project.sh   - Project installation script (online)"
+echo "   $INSTALL_DIR/setup/sync-project-local.sh - Project installation script (offline)"
 
 if [ "$CLAUDE_CODE" = true ]; then
     echo "   $INSTALL_DIR/claude-code/agents/ - Claude Code agent templates"
@@ -229,7 +236,9 @@ echo "1. Customize your standards in $INSTALL_DIR/standards/"
 echo ""
 echo "2. Configure project types in $INSTALL_DIR/config.yml"
 echo ""
-echo "3. Navigate to a project directory and run: $PROJECT_SCRIPT"
+echo "3. Navigate to a project directory and run:"
+echo "   - Online:  $PROJECT_SCRIPT"
+echo "   - Offline: $INSTALL_DIR/setup/sync-project-local.sh"
 echo ""
 echo "--------------------------------"
 echo ""
