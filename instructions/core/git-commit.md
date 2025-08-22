@@ -57,7 +57,7 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
 ## Process Flow
 
 <pre_flight_check>
-  EXECUTE: @~/.agent-os/instructions/meta/pre-flight.md
+  EXECUTE: @.agent-os/instructions/meta/pre-flight.md
 </pre_flight_check>
 
 <process_flow>
@@ -95,7 +95,7 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
           <actions>
             - SET: MODE = plan_execution
             - LOAD: plan file from .agent-os/commit-plan/${plan}
-            - VALIDATE: plan file structure against @~/.agent-os/instructions/meta/commit-plan-schema.md
+            - VALIDATE: plan file structure against @.agent-os/instructions/meta/commit-plan-schema.md
             - CREATE: NATS KV state with timestamped key pattern peer.commit.yyyy.mm.dd.hh.mm
           </actions>
         </plan_execution_mode>
@@ -157,7 +157,7 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
         <action>
           DELEGATE: plan file validation to commit-plan-validation.md
           
-          REFERENCE: @~/.agent-os/instructions/meta/commit-plan-validation.md
+          REFERENCE: @.agent-os/instructions/meta/commit-plan-validation.md
           EXECUTE: Complete plan validation workflow:
             1. File Location and Format Detection workflow
             2. JSON Plan Validation workflow (if JSON format)
@@ -175,7 +175,7 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
         <action>
           DELEGATE: state creation to git-commit-state-management.md
           
-          REFERENCE: @~/.agent-os/instructions/meta/git-commit-state-management.md
+          REFERENCE: @.agent-os/instructions/meta/git-commit-state-management.md
           EXECUTE: State Creation Workflow:
             1. Extract Timestamp from Plan Filename workflow
             2. Initialize State Object workflow
@@ -206,7 +206,7 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
       <action>
         DELEGATE: resume state discovery to git-commit-state-management.md
         
-        REFERENCE: @~/.agent-os/instructions/meta/git-commit-state-management.md
+        REFERENCE: @.agent-os/instructions/meta/git-commit-state-management.md
         EXECUTE: Resume State Discovery workflow:
           1. Search for Incomplete Executions workflow
           2. Present Resumable Options workflow  
@@ -236,7 +236,7 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
       <action>
         DELEGATE: multi-branch execution to multi-branch-execution.md
         
-        REFERENCE: @~/.agent-os/instructions/meta/multi-branch-execution.md
+        REFERENCE: @.agent-os/instructions/meta/multi-branch-execution.md
         EXECUTE: Complete multi-branch execution workflow:
           1. Execution Context Initialization workflow
           2. Initial Stash Operations workflow (preserve uncommitted changes)  
@@ -272,7 +272,7 @@ Execute git commit operations with optional Zen MCP precommit validation when ex
       <action>
         DELEGATE: plan deviation handling to user-interaction-workflows.md
         
-        REFERENCE: @~/.agent-os/instructions/meta/user-interaction-workflows.md
+        REFERENCE: @.agent-os/instructions/meta/user-interaction-workflows.md
         EXECUTE: Plan deviation detection and user confirmation workflow:
           1. Detect deviation conditions (plan vs actual state comparison)
           2. Present deviation report with visual decision tree
@@ -527,7 +527,7 @@ When executed through PEER (`/peer --instruction=git-commit`), the PEER executor
   <action>
     DELEGATE: all error handling to git-error-recovery.md
     
-    REFERENCE: @~/.agent-os/instructions/meta/git-error-recovery.md
+    REFERENCE: @.agent-os/instructions/meta/git-error-recovery.md
     EXECUTE: Comprehensive error handling workflows:
       1. Error Classification and Detection workflow
       2. Transient Error Handling workflow (with retry strategies)

@@ -16,10 +16,10 @@ BEFORE BEGINING YOU MUST ECHO THE VERSION NUMBER AT THE TOP OF THE FILE CONCATON
 
 ## Unified State Schema
 
-This instruction uses the unified state schema defined in @~/.agent-os/instructions/meta/unified_state_schema.md for all state management. All PEER phases work with a single state object per cycle stored at `[KEY_PREFIX].cycle.[CYCLE_NUMBER]`.
+This instruction uses the unified state schema defined in @.agent-os/instructions/meta/unified_state_schema.md for all state management. All PEER phases work with a single state object per cycle stored at `[KEY_PREFIX].cycle.[CYCLE_NUMBER]`.
 
 <pre_flight_check>
-  EXECUTE: @~/.agent-os/instructions/meta/pre-flight.md
+  EXECUTE: @.agent-os/instructions/meta/pre-flight.md
 </pre_flight_check>
 
 <process_flow>
@@ -224,7 +224,7 @@ Create or determine the PEER cycle for this execution and set up initial state.
     CYCLE_NUMBER=$NEW_CYCLE_NUMBER
     
     # Second: Create the unified state object
-    CREATE unified state object (see @~/.agent-os/instructions/meta/unified_state_schema.md):
+    CREATE unified state object (see @.agent-os/instructions/meta/unified_state_schema.md):
     {
       "version": 1,
       "cycle_id": "[KEY_PREFIX].cycle.[CYCLE_NUMBER]",
@@ -334,7 +334,7 @@ Use the peer-planner subagent to decompose the instruction into manageable phase
             4. Update metadata.current_phase appropriately
             5. Write the updated state back to STATE_KEY
             
-            The unified state follows the schema at @~/.agent-os/instructions/meta/unified_state_schema.md"
+            The unified state follows the schema at @.agent-os/instructions/meta/unified_state_schema.md"
   WAIT: For planning completion
   VERIFY: State updated successfully with phases.plan.status = "completed"
 </instructions>
@@ -376,7 +376,7 @@ Use the peer-executor subagent to execute the planned instruction using appropri
             4. Update metadata.current_phase to 'execute'
             5. Write the updated state back to STATE_KEY
             
-            The unified state follows the schema at @~/.agent-os/instructions/meta/unified_state_schema.md"
+            The unified state follows the schema at @.agent-os/instructions/meta/unified_state_schema.md"
   WAIT: For execution completion
   VERIFY: phases.execute.status == "completed"
 </instructions>
@@ -417,7 +417,7 @@ Use the peer-express subagent to format and present the execution results profes
             4. Update metadata.current_phase to 'express'
             5. Write the updated state back to STATE_KEY
             
-            The unified state follows the schema at @~/.agent-os/instructions/meta/unified_state_schema.md"
+            The unified state follows the schema at @.agent-os/instructions/meta/unified_state_schema.md"
   WAIT: For express completion
   PROCESS: Display formatted results to user
 </instructions>
@@ -465,7 +465,7 @@ Use the peer-review subagent to assess execution quality and provide improvement
             4. Update metadata.current_phase to 'review'
             5. Write the updated state back to STATE_KEY
             
-            The unified state follows the schema at @~/.agent-os/instructions/meta/unified_state_schema.md"
+            The unified state follows the schema at @.agent-os/instructions/meta/unified_state_schema.md"
   WAIT: For review completion
   PROCESS: Share insights for continuous improvement
 </instructions>

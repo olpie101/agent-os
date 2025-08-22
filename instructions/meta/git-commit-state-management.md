@@ -13,8 +13,8 @@ encoding: UTF-8
 Declarative XML workflows for managing git commit execution state in NATS KV. These patterns enable persistent state tracking for complex multi-branch commit operations with resume capability and conflict handling.
 
 <pre_flight_check>
-  EXECUTE: @~/.agent-os/instructions/meta/pre-flight.md
-  ALSO_EXECUTE: @~/.agent-os/instructions/meta/nats-kv-operations.md
+  EXECUTE: @.agent-os/instructions/meta/pre-flight.md
+  ALSO_EXECUTE: @.agent-os/instructions/meta/nats-kv-operations.md
 </pre_flight_check>
 
 ## State Key Format

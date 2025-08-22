@@ -13,8 +13,8 @@ encoding: UTF-8
 Declarative XML workflows for executing git operations across multiple branches as specified in commit plans. These patterns handle branch creation, switching, file staging, and commit operations with comprehensive state tracking and conflict detection.
 
 <pre_flight_check>
-  EXECUTE: @~/.agent-os/instructions/meta/pre-flight.md
-  ALSO_EXECUTE: @~/.agent-os/instructions/meta/git-commit-state-management.md
+  EXECUTE: @.agent-os/instructions/meta/pre-flight.md
+  ALSO_EXECUTE: @.agent-os/instructions/meta/git-commit-state-management.md
 </pre_flight_check>
 
 ## Execution Context Initialization
