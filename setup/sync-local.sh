@@ -243,17 +243,16 @@ done
 
 echo ""
 echo "  📂 Meta instructions:"
-sync_file "$REPO_DIR/instructions/meta/pre-flight.md" \
-          "$TARGET_DIR/instructions/meta/pre-flight.md" \
-          "instructions/meta/pre-flight.md" \
-          "$OVERWRITE_INSTRUCTIONS"
-
-if [ -f "$REPO_DIR/instructions/meta/unified_state_schema.md" ]; then
-    sync_file "$REPO_DIR/instructions/meta/unified_state_schema.md" \
-              "$TARGET_DIR/instructions/meta/unified_state_schema.md" \
-              "instructions/meta/unified_state_schema.md" \
-              "$OVERWRITE_INSTRUCTIONS"
-fi
+# Copy all .md files from instructions/meta/
+for file in "$REPO_DIR"/instructions/meta/*.md; do
+    if [ -f "$file" ]; then
+        filename=$(basename "$file")
+        sync_file "$file" \
+                  "$TARGET_DIR/instructions/meta/$filename" \
+                  "instructions/meta/$filename" \
+                  "$OVERWRITE_INSTRUCTIONS"
+    fi
+done
 
 echo ""
 echo "📥 Syncing standards..."
