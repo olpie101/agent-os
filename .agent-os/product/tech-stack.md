@@ -52,9 +52,10 @@
 
 ### Development Tools
 - **Version Control:** Git integration through git-workflow agent
-- **Testing:** Shell script test suites with executable permission validation
+- **Testing:** Shell script test suites with test-runner agent
 - **Sandbox:** Claude Code sandbox with security boundaries
 - **Auditing:** Comprehensive logging and rotation system
+- **Extensions:** Modular extension system (sandbox, hooks, PEER)
 
 ## Deployment
 
@@ -66,9 +67,11 @@
 
 ### Agent Distribution
 - **Storage:** Local file system with .agent-os directory structure
-- **Instructions:** Markdown files in instructions/core/ directory
+- **Instructions:** Markdown files in instructions/core/ and instructions/meta/ directories
 - **Agents:** Markdown specifications in claude-code/agents/ directory
 - **Standards:** Global standards in standards/ directory
+- **Commands:** Claude Code commands in commands/ directory
+- **Config:** YAML configuration for project types and tool selection
 
 ### Integration Patterns
 - **IDE Support:** Claude Code, Cursor, compatible AI coding tools
