@@ -1,0 +1,11 @@
+# Agent OS Project Configuration
+# This file overrides base configuration for this project
+
+# Extension configuration (project-specific)
+extensions:
+  # Only project-type extensions should be configured here
+  # Example:
+  # my_project_extension:
+  #   enabled: true
+  #   config:
+  #     some_setting: value

@@ -1,0 +1,18 @@
+# Agent OS Project Configuration
+# This file configures project-specific settings and extensions
+
+# Project metadata
+project:
+  name: "agent-os"
+  type: "standard"
+  created: "2025-08-22T15:16:34Z"
+
+# Extension configuration
+extensions:
+  # Project-specific extensions go here
+  # Only extensions with type: project or both will be installed
+  
+# Configuration hierarchy (can override base config)
+config:
+  # Project-specific overrides go here
+  # These override settings in ~/.agent-os/config.yml
